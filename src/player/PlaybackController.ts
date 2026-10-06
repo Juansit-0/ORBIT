@@ -4,6 +4,7 @@ import type { SongNode } from '../core/SongNode.ts'
 import type { Song } from '../core/types.ts'
 import { ServiceError } from '../services/http.ts'
 import type { PlayerAdapter, PlayerEvent, PlayerState } from './PlayerAdapter.ts'
+import type { VolumeFader } from './VolumeFader.ts'
 
 export type SourceKind = 'full' | 'preview'
 
@@ -58,6 +59,7 @@ export class PlaybackController {
     inPlan: false,
   }
   private transient: SongNode | null = null
+  private fader: VolumeFader | null = null
 
   constructor(playlist: Playlist, deps: PlaybackDeps) {
     this.playlist = playlist
@@ -90,6 +92,27 @@ export class PlaybackController {
     return () => this.noticeListeners.delete(listener)
   }
 
+  setFader(fader: VolumeFader | null): void {
+    this.fader?.cancel()
+    this.fader = fader
+    if (!fader) {
+      this.deps.full.setVolume(this.snapshot.volume)
+      this.deps.preview.setVolume(this.snapshot.volume)
+    }
+  }
+
+  private async fadeOutCurrent(ms?: number): Promise<void> {
+    const adapter = this.active
+    if (!this.fader || !adapter || this.snapshot.status !== 'playing') return
+    await this.fader.fadeOut(adapter, this.snapshot.volume, ms)
+  }
+
+  private resumeWithFade(adapter: PlayerAdapter): void {
+    if (this.fader) adapter.setVolume(0)
+    adapter.play()
+    if (this.fader) void this.fader.fadeIn(adapter, this.snapshot.volume)
+  }
+
   get transientNode(): SongNode | null {
     return this.transient && this.snapshot.nodeId === this.transient.id ? this.transient : null
   }
@@ -120,18 +143,20 @@ export class PlaybackController {
 
   async togglePlay(): Promise<void> {
     if (this.isPlaying) {
+      await this.fadeOutCurrent()
       this.active?.pause()
+      this.active?.setVolume(this.snapshot.volume)
       return
     }
     const loose = this.transientNode
     if (loose) {
-      if (this.loadedNodeId === loose.id && this.active) this.active.play()
+      if (this.loadedNodeId === loose.id && this.active) this.resumeWithFade(this.active)
       else await this.load(loose, true)
       return
     }
     const node = this.playlist.current ?? this.playlist.next()
     if (!node) return
-    if (this.loadedNodeId === node.id && this.active) this.active.play()
+    if (this.loadedNodeId === node.id && this.active) this.resumeWithFade(this.active)
     else await this.load(node, true)
   }
 
@@ -203,6 +228,7 @@ export class PlaybackController {
   }
 
   setVolume(volume: number): void {
+    this.fader?.cancel()
     const clamped = Math.round(Math.min(100, Math.max(0, volume)))
     this.deps.full.setVolume(clamped)
     this.deps.preview.setVolume(clamped)
@@ -260,6 +286,7 @@ export class PlaybackController {
   }
 
   private async load(node: SongNode, autoplay: boolean): Promise<void> {
+    if (this.fader && this.loadedNodeId !== node.id) await this.fadeOutCurrent(220)
     this.cancelPending()
     const token = this.loadToken
     const abort = new AbortController()
@@ -325,8 +352,11 @@ export class PlaybackController {
     this.loadedNodeId = node.id
     this.update({ source: kind, durationMs: source.durationMs })
     try {
+      if (this.fader && autoplay) adapter.setVolume(0)
       await adapter.load(source, autoplay)
       if (token === this.loadToken) this.failures = 0
+      if (this.fader && autoplay && token === this.loadToken) void this.fader.fadeIn(adapter, this.snapshot.volume)
+      else if (this.fader) adapter.setVolume(this.snapshot.volume)
     } catch {
       if (token === this.loadToken) this.markUnavailable(node)
     }
