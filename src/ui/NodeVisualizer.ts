@@ -5,6 +5,7 @@ import { formatTime } from './format.ts'
 import { drawLinks, FlipTracker, popIn, travel } from './motion.ts'
 import { enableDropInsert } from './dropInsert.ts'
 import type { PlaylistChange } from '../core/Playlist.ts'
+import { diffOrder, explainOperation, type Entry, type Step } from '../core/explain.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const MIN_GROW = 0.5
@@ -41,6 +42,10 @@ export class NodeVisualizer {
   private readonly pointers: HTMLElement
   private readonly now: HTMLElement
   private readonly viewport: HTMLElement
+  private readonly explainLine: HTMLElement
+  private explainEnabled = false
+  private order: Entry[] = []
+  private explainTimers: number[] = []
   private readonly refs = new Map<string, NodeRefs>()
   private lastCurrent: string | null = null
   private readonly flip = new FlipTracker('nodeId')
@@ -50,6 +55,7 @@ export class NodeVisualizer {
     this.size = el('span', { class: 'dock__size' })
     this.pointers = el('p', { class: 'dock__pointers' })
     this.now = el('p', { class: 'dock__now' })
+    this.explainLine = el('p', { class: 'dock__explain', attrs: { 'aria-live': 'polite', hidden: true } })
     this.track = el('ol', { class: 'chain', attrs: { 'aria-label': 'Doubly linked list nodes from head to tail' } })
     this.root = el('section', { class: 'dock', attrs: { 'aria-labelledby': 'dock-heading' } }, [
       el('header', { class: 'dock__head' }, [
@@ -62,6 +68,7 @@ export class NodeVisualizer {
       ]),
       (this.viewport = el('div', { class: 'dock__viewport' }, [this.track])),
       this.now,
+      this.explainLine,
     ])
     enableDropInsert({
       zone: this.viewport,
@@ -76,8 +83,16 @@ export class NodeVisualizer {
     this.render('restore')
   }
 
+  setExplain(enabled: boolean): void {
+    this.explainEnabled = enabled
+    if (!enabled) this.stopExplaining()
+  }
+
   private render(change: PlaylistChange): void {
     const nodes = this.app.playlist.list.nodes()
+    const order = nodes.map((node) => ({ id: node.id, title: node.value.title }))
+    const operation = this.explainEnabled && (change === 'add' || change === 'remove' || change === 'move') ? diffOrder(this.order, order) : null
+    this.order = order
     const fragment: Node[] = [this.terminal('null', 'start')]
     const alive = new Set<string>()
     nodes.forEach((node, index) => {
@@ -85,7 +100,9 @@ export class NodeVisualizer {
       const refs = this.refs.get(node.id) ?? this.create(node)
       this.update(refs, node, index, nodes.length)
       fragment.push(refs.item)
-      if (index < nodes.length - 1) fragment.push(el('li', { class: 'link', attrs: { 'aria-hidden': 'true' } }, [linkGlyph()]))
+      if (index < nodes.length - 1) {
+        fragment.push(el('li', { class: 'link', attrs: { 'aria-hidden': 'true', 'data-left': node.id, 'data-right': nodes[index + 1]!.id } }, [linkGlyph()]))
+      }
     })
     fragment.push(this.terminal('null', 'end'))
     for (const id of [...this.refs.keys()]) if (!alive.has(id)) this.refs.delete(id)
@@ -104,6 +121,46 @@ export class NodeVisualizer {
     if (change === 'add' || change === 'remove' || change === 'move') {
       drawLinks(this.track.querySelectorAll<SVGPathElement>('.link__glyph path'))
     }
+    if (operation) this.explain(explainOperation(operation))
+  }
+
+  private explain(steps: Step[]): void {
+    this.stopExplaining()
+    this.root.dataset.explaining = 'true'
+    this.explainLine.hidden = false
+    steps.forEach((step, index) => {
+      this.explainTimers.push(window.setTimeout(() => this.showStep(step, index, steps.length), index * 1100))
+    })
+    this.explainTimers.push(window.setTimeout(() => this.stopExplaining(), steps.length * 1100 + 1400))
+  }
+
+  private showStep(step: Step, index: number, total: number): void {
+    this.clearHighlights()
+    setText(this.explainLine, `${index + 1}/${total}  ${step.text}`)
+    if (step.node) this.refs.get(step.node)?.item.classList.add('node--explained')
+    if (step.tag) this.track.querySelector(`.node[data-${step.tag}='true'] .node__tag--${step.tag}`)?.classList.add('node__tag--explained')
+    if (step.link) {
+      const { left, right, arrow } = step.link
+      const link = [...this.track.querySelectorAll<HTMLElement>('.link')].find(
+        (candidate) => (left === null || candidate.dataset.left === left) && (right === null || candidate.dataset.right === right) && (left !== null || right !== null),
+      )
+      link?.querySelector(`.link__${arrow}`)?.classList.add('link__path--explained')
+    }
+  }
+
+  private clearHighlights(): void {
+    for (const element of this.track.querySelectorAll('.node--explained, .node__tag--explained, .link__path--explained')) {
+      element.classList.remove('node--explained', 'node__tag--explained', 'link__path--explained')
+    }
+  }
+
+  private stopExplaining(): void {
+    for (const timer of this.explainTimers) window.clearTimeout(timer)
+    this.explainTimers = []
+    this.clearHighlights()
+    delete this.root.dataset.explaining
+    this.explainLine.hidden = true
+    setText(this.explainLine, '')
   }
 
   private terminal(text: string, side: 'start' | 'end'): HTMLLIElement {

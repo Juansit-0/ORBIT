@@ -83,6 +83,7 @@ if (root) {
   const libraryMenu = new LibraryMenu(app)
   const queue = new QueuePanel(app, libraryMenu.button)
   const visualizer = new NodeVisualizer(app)
+  visualizer.setExplain(prefs.explain)
   const tabs = new MobileTabs(shell)
   const help = createShortcutHelp()
   const toggleLyrics = () => {
@@ -125,6 +126,11 @@ if (root) {
     onCinemaFullscreen: (enabled) => {
       cinemaFullscreen = enabled
       savePrefs({ cinemaFullscreen: enabled })
+    },
+    explain: prefs.explain,
+    onExplain: (enabled) => {
+      visualizer.setExplain(enabled)
+      savePrefs({ explain: enabled })
     },
   })
   const cinemaButton = el('button', {
