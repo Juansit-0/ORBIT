@@ -106,6 +106,9 @@ if (root) {
   }
   applyList(listShown)
   const tabs = new MobileTabs(shell)
+  tabs.root.addEventListener('click', () => {
+    if (shell.dataset.view === 'search') search.open()
+  })
   const help = createShortcutHelp()
   const toggleLyrics = () => {
     const shown = !(lyrics.shown && now.root.offsetParent !== null)

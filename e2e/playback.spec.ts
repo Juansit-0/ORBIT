@@ -86,7 +86,7 @@ test.describe('navigation', () => {
 })
 
 test.describe('fallbacks', () => {
-  test.use({ mocks: { resolve: 'quota' } })
+  test.use({ mocks: { resolve: 'quota', charts: 'ok' } })
 
   test('plays the preview when the YouTube quota is exhausted', async ({ orbit }) => {
     await orbit.search('radiohead')

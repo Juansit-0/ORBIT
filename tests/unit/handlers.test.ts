@@ -166,3 +166,42 @@ describe('lookupSongs', () => {
     expect((await lookupSongs('1', vi.fn().mockResolvedValue(jsonResponse({}, 500)))).status).toBe(502)
   })
 })
+
+import { chartCountry, chartSongs } from '../../api/_lib/handlers.ts'
+
+describe('chartSongs', () => {
+  const feed = (ids: string[]) => jsonResponse({ feed: { results: ids.map((id) => ({ id })) } })
+  const lookup = () => jsonResponse({
+    results: [
+      { wrapperType: 'track', trackId: 7, trackName: 'Seven', artistName: 'G' },
+      { wrapperType: 'track', trackId: 5, trackName: 'Five', artistName: 'E' },
+    ],
+  })
+
+  it('reads the country chart and looks the songs up in chart order', async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(feed(['5', '7', 'x'])).mockResolvedValueOnce(lookup())
+    const result = await chartSongs('CO', fetcher)
+    expect(result.status).toBe(200)
+    expect((result.body as { songs: { id: string }[] }).songs.map((s) => s.id)).toEqual(['5', '7'])
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain('/api/v2/co/music/most-played/25/songs.json')
+    expect(String(fetcher.mock.calls[1]?.[0])).toContain('id=5%2C7')
+  })
+
+  it('falls back to the US chart when a country has none', async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(jsonResponse({}, 404)).mockResolvedValueOnce(feed(['7'])).mockResolvedValueOnce(lookup())
+    const result = await chartSongs('zz', fetcher)
+    expect(result.status).toBe(200)
+    expect(String(fetcher.mock.calls[1]?.[0])).toContain('/api/v2/us/')
+  })
+
+  it('reports upstream errors', async () => {
+    expect((await chartSongs('us', vi.fn().mockResolvedValue(jsonResponse({}, 500)))).status).toBe(502)
+    expect((await chartSongs('us', vi.fn().mockRejectedValue(new Error('offline')))).status).toBe(502)
+  })
+
+  it('accepts only two letter countries', () => {
+    expect(chartCountry('es')).toBe('es')
+    expect(chartCountry('es-CO')).toBe('us')
+    expect(chartCountry(null)).toBe('us')
+  })
+})

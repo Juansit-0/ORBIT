@@ -7,6 +7,9 @@ import { formatTime } from './format.ts'
 import { icon } from './icons.ts'
 import { endSongDrag, startSongDrag } from './dropInsert.ts'
 import type { PlayHistory } from '../services/history.ts'
+import { chartSongs, countryFromLocale } from '../services/chartsService.ts'
+
+const CHARTS_PREVIEW = 10
 
 const DEBOUNCE_MS = 350
 
@@ -21,6 +24,9 @@ export class SearchPanel {
   private abort: AbortController | null = null
   private lastTerm = ''
   private idle = true
+  private charts: Song[] | 'loading' | 'error' | null = null
+  private chartsExpanded = false
+  private readonly country = countryFromLocale(navigator.language)
   private readonly history: PlayHistory | null
 
   constructor(app: PlayerApp, history: PlayHistory | null = null) {
@@ -106,6 +112,7 @@ export class SearchPanel {
   }
 
   open(): void {
+    void this.loadCharts()
     if (this.isOpen) return
     this.root.dataset.open = 'true'
     this.input.setAttribute('aria-expanded', 'true')
@@ -150,27 +157,75 @@ export class SearchPanel {
     this.idle = true
     this.body.setAttribute('aria-busy', 'false')
     const recent = this.history?.entries().slice(0, 8) ?? []
+    const sections: HTMLElement[] = []
     if (recent.length > 0) {
       const clear = el('button', { class: 'button button--quiet button--small', text: 'Clear', attrs: { type: 'button', 'aria-label': 'Clear recently played' } })
       clear.addEventListener('click', () => {
         this.history?.clear()
         this.input.focus()
       })
-      this.body.replaceChildren(
+      sections.push(
         el('section', { class: 'finder__section', attrs: { 'aria-labelledby': 'recent-heading' } }, [
           el('header', { class: 'finder__section-head' }, [el('h2', { class: 'finder__section-title', text: 'Recently played', attrs: { id: 'recent-heading' } }), clear]),
           el('ul', { class: 'results results--recent' }, recent.map((entry) => this.renderResult(entry.song))),
         ]),
       )
-      return
+    } else {
+      sections.push(el('p', { class: 'finder__hint', text: 'Search the iTunes catalog by song, artist or album. Every song plays in full.' }))
     }
-    this.body.replaceChildren(
-      el('div', { class: 'empty' }, [
-        icon('music', 'icon empty__icon'),
-        el('p', { class: 'empty__title', text: 'Find any song' }),
-        el('p', { class: 'empty__text', text: 'Search the iTunes catalog, then add the song at the start, the end or an exact position. Songs play in full.' }),
-      ]),
-    )
+    sections.push(this.renderCharts())
+    this.body.replaceChildren(...sections)
+  }
+
+  private renderCharts(): HTMLElement {
+    const heading = el('h2', { class: 'finder__section-title', text: `Top charts · ${this.country.toUpperCase()}`, attrs: { id: 'charts-heading' } })
+    const head = el('header', { class: 'finder__section-head' }, [heading])
+    const section = el('section', { class: 'finder__section finder__charts', attrs: { 'aria-labelledby': 'charts-heading' } }, [head])
+    const charts = this.charts
+    if (charts === null || charts === 'loading') {
+      section.setAttribute('aria-busy', 'true')
+      section.append(el('ul', { class: 'results' }, Array.from({ length: 4 }, () =>
+        el('li', { class: 'result result--skeleton', attrs: { 'aria-hidden': 'true' } }, [
+          el('span', { class: 'skeleton skeleton--cover' }),
+          el('span', { class: 'result__meta' }, [el('span', { class: 'skeleton skeleton--line' }), el('span', { class: 'skeleton skeleton--line skeleton--short' })]),
+        ]),
+      )))
+      return section
+    }
+    if (charts === 'error') {
+      const retry = el('button', { class: 'button button--quiet button--small', text: 'Try again', attrs: { type: 'button' } })
+      retry.addEventListener('click', () => void this.loadCharts(true))
+      section.append(el('div', { class: 'finder__note', attrs: { role: 'alert' } }, [el('p', { text: 'The charts could not be loaded.' }), retry]))
+      return section
+    }
+    if (charts.length === 0) {
+      section.append(el('p', { class: 'finder__note', text: 'No chart is available right now.' }))
+      return section
+    }
+    const shown = this.chartsExpanded ? charts : charts.slice(0, CHARTS_PREVIEW)
+    section.append(el('ol', { class: 'results results--charts' }, shown.map((song, index) => this.renderResult(song, index + 1))))
+    if (charts.length > shown.length) {
+      const more = el('button', { class: 'button button--quiet button--small finder__more', text: `Show all ${charts.length}`, attrs: { type: 'button' } })
+      more.addEventListener('click', () => {
+        this.chartsExpanded = true
+        this.renderIdle()
+        this.body.querySelectorAll<HTMLElement>('.results--charts .result')[CHARTS_PREVIEW]?.querySelector<HTMLButtonElement>('button')?.focus()
+      })
+      section.append(more)
+    }
+    return section
+  }
+
+  private async loadCharts(force = false): Promise<void> {
+    if (!force && this.charts !== null) return
+    this.charts = 'loading'
+    if (this.idle && this.input.value.trim() === '') this.renderIdle()
+    try {
+      this.charts = await chartSongs(this.country)
+    } catch {
+      this.charts = 'error'
+    }
+    if (this.idle && this.input.value.trim() === '') this.renderIdle()
   }
 
   private renderMessage(title: string, text: string): void {
@@ -223,7 +278,7 @@ export class SearchPanel {
     )
   }
 
-  private renderResult(song: Song): HTMLElement {
+  private renderResult(song: Song, rank?: number): HTMLElement {
     const label = `${song.title} by ${song.artist}`
     const insertInput = el('input', {
       class: 'insert__input',
@@ -262,6 +317,7 @@ export class SearchPanel {
       attrs: { type: 'button', 'aria-label': `Add ${label} at the end`, title: 'Add last' },
     }, [icon('toLast')])
     const item = el('li', { class: 'result' }, [
+      rank === undefined ? null : el('span', { class: 'result__rank', text: String(rank), attrs: { 'aria-label': `Number ${rank}` } }),
       el('img', { class: 'result__cover', attrs: { src: song.artworkUrl.replace('600x600', '120x120'), alt: '', width: 48, height: 48, loading: 'lazy', decoding: 'async' } }),
       el('div', { class: 'result__meta' }, [
         el('p', { class: 'result__title', text: song.title }),

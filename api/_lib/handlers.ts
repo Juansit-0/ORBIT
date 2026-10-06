@@ -88,6 +88,31 @@ export async function lookupSongs(rawIds: string, fetcher: Fetcher = fetch): Pro
   }
 }
 
+export function chartCountry(raw: string | null): string {
+  const value = (raw ?? '').trim().toLowerCase()
+  return /^[a-z]{2}$/.test(value) ? value : 'us'
+}
+
+async function chartIds(country: string, fetcher: Fetcher): Promise<string[] | null> {
+  const response = await fetcher(new URL(`https://rss.marketingtools.apple.com/api/v2/${country}/music/most-played/25/songs.json`))
+  if (!response.ok) return null
+  const data = (await response.json()) as { feed?: { results?: { id?: unknown }[] } }
+  return (data.feed?.results ?? []).map((entry) => String(entry.id ?? '')).filter((id) => /^\d{1,12}$/.test(id))
+}
+
+export async function chartSongs(rawCountry: string | null, fetcher: Fetcher = fetch): Promise<ApiResult> {
+  const country = chartCountry(rawCountry)
+  try {
+    let ids = await chartIds(country, fetcher)
+    if ((!ids || ids.length === 0) && country !== 'us') ids = await chartIds('us', fetcher)
+    if (!ids) return { status: 502, body: { error: 'upstream_error' } }
+    if (ids.length === 0) return { status: 200, body: { songs: [] } }
+    return await lookupSongs(ids.join(','), fetcher)
+  } catch {
+    return { status: 502, body: { error: 'upstream_error' } }
+  }
+}
+
 export function parseIsoDuration(value: string): number {
   const match = /^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(value)
   if (!match) return 0
