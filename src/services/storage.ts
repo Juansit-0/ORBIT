@@ -45,3 +45,19 @@ export function loadPlaylist(): PlaylistSnapshot | null {
 export function savePlaylist(snapshot: PlaylistSnapshot): void {
   writeJson(PLAYLIST_KEY, snapshot)
 }
+
+const PREFS_KEY = 'orbit:v1:prefs'
+
+export interface Prefs {
+  volume: number
+}
+
+export function loadPrefs(): Prefs {
+  const value = readJson<Partial<Prefs>>(PREFS_KEY)
+  const volume = typeof value?.volume === 'number' && value.volume >= 0 && value.volume <= 100 ? value.volume : 80
+  return { volume }
+}
+
+export function savePrefs(prefs: Prefs): void {
+  writeJson(PREFS_KEY, prefs)
+}

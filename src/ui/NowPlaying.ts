@@ -24,6 +24,7 @@ export class NowPlaying {
   private readonly volume: HTMLInputElement
   private readonly muteButton: HTMLButtonElement
   private readonly emptyText = el('span', { text: 'Nothing in orbit yet' })
+  readonly volumeControl: HTMLElement
   private seeking = false
   private lastVolume = 80
 
@@ -73,9 +74,9 @@ export class NowPlaying {
       el('div', { class: 'deck__controls' }, [
         this.seek,
         el('div', { class: 'transport' }, [this.shuffleButton, this.prevButton, this.playButton, this.nextButton, this.repeatButton]),
-        el('div', { class: 'volume' }, [this.muteButton, this.volume]),
       ]),
     ])
+    this.volumeControl = el('div', { class: 'volume' }, [this.muteButton, this.volume])
     this.bind()
     app.playback.subscribe((state) => this.render(state))
     app.playlist.subscribe(() => this.render(app.playback.state))

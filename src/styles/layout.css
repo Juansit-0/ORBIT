@@ -3,10 +3,11 @@
   z-index: 1;
   display: grid;
   grid-template-columns: var(--rail-search) minmax(0, 1fr) var(--rail-queue);
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
     'mast mast mast'
-    'search deck queue';
+    'search deck queue'
+    'search dock queue';
   gap: var(--space-4);
   height: 100svh;
   padding: var(--space-4);
@@ -154,6 +155,19 @@
   .rail--queue,
   .deck {
     grid-area: panel;
+  }
+
+  .app {
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      'mast'
+      'panel'
+      'dock'
+      'tabs';
+  }
+
+  .app:not([data-view='now']) .dock {
+    display: none;
   }
 
   .app:not([data-view='search']) .rail--search,
