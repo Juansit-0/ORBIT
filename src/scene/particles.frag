@@ -9,6 +9,8 @@ varying float vHeat;
 varying float vFacing;
 varying float vSeed;
 varying float vRing;
+varying float vMorph;
+varying vec3 vTargetColor;
 
 void main() {
   vec2 c = gl_PointCoord - 0.5;
@@ -26,5 +28,7 @@ void main() {
   float alpha = soft * mix(0.18, 0.92, max(depth, vRing * 0.8));
   alpha *= 0.8 + 0.2 * vSeed;
   alpha = max(alpha, soft * clamp(vHeat, 0.0, 1.0));
+  color = mix(color, vTargetColor, vMorph);
+  alpha = mix(alpha, smoothstep(0.5, 0.2, r) * 0.95, vMorph);
   gl_FragColor = vec4(color, alpha);
 }

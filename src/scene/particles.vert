@@ -2,6 +2,9 @@ uniform float uTime;
 uniform float uPulse;
 uniform float uEnergy;
 uniform float uShock;
+uniform float uIntro;
+uniform float uMorph;
+uniform vec4 uClick;
 uniform float uPixelRatio;
 uniform float uSize;
 uniform float uScale;
@@ -10,6 +13,8 @@ uniform vec3 uKeyDir;
 
 attribute vec4 aSeed;
 attribute float aRing;
+attribute vec2 aTarget;
+attribute vec3 aTargetColor;
 
 varying float vLight;
 varying float vRim;
@@ -17,6 +22,8 @@ varying float vHeat;
 varying float vFacing;
 varying float vSeed;
 varying float vRing;
+varying float vMorph;
+varying vec3 vTargetColor;
 
 void main() {
   vec3 n = normalize(position);
@@ -31,7 +38,13 @@ void main() {
   vec3 p = position * (shell + wobble * amplitude + breath + shock);
   p += vec3(drift) * 0.012 * aRing;
 
+  float arrival = clamp((uIntro - aSeed.x * 0.35) / 0.65, 0.0, 1.0);
+  arrival = 1.0 - pow(1.0 - arrival, 4.0);
+  vec3 scatter = normalize(position + (aSeed.xyz - 0.5) * 1.6) * (5.0 + aSeed.w * 9.0);
+  p = mix(scatter, p, arrival);
+
   vec4 world = modelMatrix * vec4(p, 1.0);
+  vec3 center = modelMatrix[3].xyz;
   float heat = 0.0;
   float reach = 0.4 * uScale;
   for (int i = 0; i < TRAIL_LENGTH; i++) {
@@ -43,17 +56,33 @@ void main() {
     heat = max(heat, influence);
   }
 
+  if (uClick.w < 1.0) {
+    float distanceToClick = length(world.xyz - uClick.xyz) / uScale;
+    float front = uClick.w * 3.4;
+    float band = exp(-pow(distanceToClick - front, 2.0) / 0.05) * (1.0 - uClick.w);
+    world.xyz += normalize(world.xyz - center + vec3(0.0001)) * band * 0.42 * uScale;
+    heat = max(heat, band * 0.9);
+  }
+
+  float morph = clamp(uMorph * 1.5 - aSeed.y * 0.5, 0.0, 1.0) * (1.0 - aRing);
+  morph = morph * morph * (3.0 - 2.0 * morph);
+  vec3 target = center + vec3(aTarget * uScale * 1.04, 0.35 * uScale);
+  world.xyz = mix(world.xyz, target, morph);
+
   vec3 worldNormal = normalize(mat3(modelMatrix) * n);
   vec3 viewDir = normalize(cameraPosition - world.xyz);
   vLight = max(dot(worldNormal, normalize(uKeyDir)), 0.0);
   vRim = pow(1.0 - max(dot(worldNormal, viewDir), 0.0), 2.4);
-  vFacing = dot(worldNormal, viewDir);
-  vHeat = heat;
+  vFacing = mix(dot(worldNormal, viewDir), 1.0, morph);
+  vHeat = heat * (1.0 - morph);
   vSeed = aSeed.w;
   vRing = aRing;
+  vMorph = morph;
+  vTargetColor = aTargetColor;
 
   vec4 mvPosition = viewMatrix * world;
   gl_Position = projectionMatrix * mvPosition;
   float size = uSize * (0.5 + aSeed.z * 0.95) * (1.0 + heat * 1.1 + uPulse * uEnergy * 0.3);
-  gl_PointSize = size * uPixelRatio * uScale * (8.0 / -mvPosition.z);
+  size = mix(size, uSize * 1.05, morph);
+  gl_PointSize = size * uPixelRatio * uScale * (8.0 / -mvPosition.z) * mix(1.0, 0.6, 1.0 - arrival);
 }
