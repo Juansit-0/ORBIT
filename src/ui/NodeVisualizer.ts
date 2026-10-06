@@ -2,6 +2,8 @@ import type { PlayerApp } from '../app/PlayerApp.ts'
 import type { SongNode } from '../core/SongNode.ts'
 import { el, setText } from './dom.ts'
 import { formatTime } from './format.ts'
+import { drawLinks, FlipTracker, popIn } from './motion.ts'
+import type { PlaylistChange } from '../core/Playlist.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 const PX_PER_SECOND = 0.42
@@ -38,6 +40,7 @@ export class NodeVisualizer {
   private readonly pointers: HTMLElement
   private readonly refs = new Map<string, NodeRefs>()
   private lastCurrent: string | null = null
+  private readonly flip = new FlipTracker('nodeId')
 
   constructor(app: PlayerApp) {
     this.app = app
@@ -55,12 +58,12 @@ export class NodeVisualizer {
       ]),
       el('div', { class: 'dock__viewport' }, [this.track]),
     ])
-    app.playlist.subscribe(() => this.render())
+    app.playlist.subscribe((change) => this.render(change))
     app.playback.subscribe(() => this.renderCurrent())
-    this.render()
+    this.render('restore')
   }
 
-  private render(): void {
+  private render(change: PlaylistChange): void {
     const nodes = this.app.playlist.list.nodes()
     const fragment: Node[] = [this.terminal('null', 'start')]
     const alive = new Set<string>()
@@ -83,6 +86,11 @@ export class NodeVisualizer {
       nodes.length === 0 ? 'head = null, tail = null' : `head = ${head?.value.title ?? 'null'}, tail = ${tail?.value.title ?? 'null'}`,
     )
     this.renderCurrent()
+    const items = nodes.map((node) => this.refs.get(node.id)?.item).filter((item): item is HTMLLIElement => Boolean(item))
+    this.flip.play(items, popIn)
+    if (change === 'add' || change === 'remove' || change === 'move') {
+      drawLinks(this.track.querySelectorAll<SVGPathElement>('.link__glyph path'))
+    }
   }
 
   private terminal(text: string, side: 'start' | 'end'): HTMLLIElement {

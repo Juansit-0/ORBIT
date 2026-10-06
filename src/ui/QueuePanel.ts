@@ -2,6 +2,7 @@ import type { PlayerApp } from '../app/PlayerApp.ts'
 import type { SongNode } from '../core/SongNode.ts'
 import { enableDragReorder } from './dragReorder.ts'
 import { el, setText, toggleAttr } from './dom.ts'
+import { exitRow, FlipTracker, slideIn } from './motion.ts'
 import { formatTime, plural } from './format.ts'
 import { icon } from './icons.ts'
 
@@ -28,6 +29,8 @@ export class QueuePanel {
   private readonly empty: HTMLElement
   private readonly noMatch: HTMLElement
   private readonly rows = new Map<string, RowRefs>()
+  private readonly flip = new FlipTracker('nodeId')
+  private suppressFlip = false
 
   constructor(app: PlayerApp) {
     this.app = app
@@ -55,12 +58,15 @@ export class QueuePanel {
       ]),
       el('div', { class: 'rail__body' }, [this.list, this.noMatch, this.empty]),
     ])
-    this.filter.addEventListener('input', () => this.applyFilter())
+    this.filter.addEventListener('input', () => this.applyFilter(true))
     enableDragReorder({
       list: this.list,
       handleSelector: '.waypoint__pos',
       itemSelector: '.waypoint',
-      onDrop: (from, to) => this.app.move(from, to),
+      onDrop: (from, to) => {
+        this.suppressFlip = true
+        this.app.move(from, to)
+      },
     })
     app.playlist.subscribe(() => this.render())
     app.playback.subscribe(() => this.renderCurrent())
@@ -80,22 +86,35 @@ export class QueuePanel {
     const alive = new Set(nodes.map((node) => node.id))
     for (const [id, refs] of this.rows) {
       if (!alive.has(id)) {
-        refs.row.remove()
         this.rows.delete(id)
+        exitRow(refs.row, () => refs.row.remove())
       }
     }
+    const live = [...this.list.children].filter((child) => !(child as HTMLElement).dataset.exiting)
     nodes.forEach((node, index) => {
       const refs = this.rows.get(node.id) ?? this.createRow(node)
       this.updateRow(refs, node, index, nodes.length)
-      const expected = this.list.children[index]
-      if (expected !== refs.row) this.list.insertBefore(refs.row, expected ?? null)
+      const current = live[index]
+      if (current !== refs.row) {
+        this.list.insertBefore(refs.row, current ?? null)
+        const previousIndex = live.indexOf(refs.row)
+        if (previousIndex !== -1) live.splice(previousIndex, 1)
+        live.splice(index, 0, refs.row)
+      }
     })
     const total = nodes.reduce((sum, node) => sum + node.value.durationMs, 0)
-    setText(this.summary, nodes.length === 0 ? 'No songs' : `${plural(nodes.length, 'song')} · ${formatTime(total)}`)
+    setText(this.summary, nodes.length === 0 ? 'No songs' : `${plural(nodes.length, 'song')} \u00b7 ${formatTime(total)}`)
     this.empty.hidden = nodes.length > 0
     this.list.hidden = nodes.length === 0
     this.renderCurrent()
-    this.applyFilter()
+    this.applyFilter(false)
+    const rows = nodes.map((node) => this.rows.get(node.id)?.row).filter((row): row is HTMLLIElement => Boolean(row))
+    if (this.suppressFlip) {
+      this.suppressFlip = false
+      this.flip.snapshot(rows)
+    } else {
+      this.flip.play(rows, slideIn)
+    }
   }
 
   private renderCurrent(): void {
@@ -194,7 +213,7 @@ export class QueuePanel {
     })
   }
 
-  private applyFilter(): void {
+  private applyFilter(snapshot: boolean): void {
     const query = this.filter.value.trim().toLowerCase()
     let visible = 0
     for (const node of this.app.playlist.list.nodes()) {
@@ -209,5 +228,6 @@ export class QueuePanel {
       if (match) visible += 1
     }
     this.noMatch.hidden = query === '' || visible > 0 || this.app.playlist.isEmpty()
+    if (snapshot) this.flip.snapshot([...this.rows.values()].map((refs) => refs.row))
   }
 }

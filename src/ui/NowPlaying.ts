@@ -3,6 +3,7 @@ import type { PlaybackState } from '../player/PlaybackController.ts'
 import { el, setText, toggleAttr } from './dom.ts'
 import { formatTime } from './format.ts'
 import { icon } from './icons.ts'
+import { cascadeText, fadeSwap, magnetize } from './motion.ts'
 
 export class NowPlaying {
   readonly root: HTMLElement
@@ -79,6 +80,7 @@ export class NowPlaying {
     ])
     this.volumeControl = el('div', { class: 'volume' }, [this.muteButton, this.volume])
     this.bind()
+    for (const button of [this.playButton, this.prevButton, this.nextButton]) magnetize(button, button === this.playButton ? 7 : 5)
     app.playback.subscribe((state) => this.render(state))
     app.playlist.subscribe(() => this.render(app.playback.state))
   }
@@ -124,12 +126,17 @@ export class NowPlaying {
     this.lens.dataset.status = state.status
     if (song) {
       const src = song.artworkUrl
-      if (this.cover.getAttribute('src') !== src) this.cover.src = src
+      if (this.cover.getAttribute('src') !== src) {
+        this.cover.src = src
+        fadeSwap(this.lens)
+      }
       this.cover.alt = `Cover of ${song.album || song.title}`
-      setText(this.title, song.title)
+      cascadeText(this.title, song.title)
       setText(this.artist, song.album ? `${song.artist} · ${song.album}` : song.artist)
     } else {
       this.cover.removeAttribute('src')
+      this.title.removeAttribute('aria-label')
+      this.title.dataset.cascaded = 'false'
       setText(this.emptyText, playlist.isEmpty() ? 'Nothing in orbit yet' : 'Ready for launch')
       setText(this.title, 'Orbit')
       setText(this.artist, playlist.isEmpty() ? 'Add a song to launch the flight plan.' : 'Press play to start at the head of the list.')
