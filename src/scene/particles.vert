@@ -3,7 +3,6 @@ uniform float uPulse;
 uniform float uEnergy;
 uniform float uShock;
 uniform float uIntro;
-uniform float uMorph;
 uniform vec4 uClick;
 uniform float uPixelRatio;
 uniform float uSize;
@@ -13,8 +12,6 @@ uniform vec3 uKeyDir;
 
 attribute vec4 aSeed;
 attribute float aRing;
-attribute vec2 aTarget;
-attribute vec3 aTargetColor;
 
 varying float vLight;
 varying float vRim;
@@ -22,8 +19,6 @@ varying float vHeat;
 varying float vFacing;
 varying float vSeed;
 varying float vRing;
-varying float vMorph;
-varying vec3 vTargetColor;
 
 void main() {
   vec3 n = normalize(position);
@@ -64,25 +59,17 @@ void main() {
     heat = max(heat, band * 0.9);
   }
 
-  float morph = clamp(uMorph * 1.5 - aSeed.y * 0.5, 0.0, 1.0) * (1.0 - aRing);
-  morph = morph * morph * (3.0 - 2.0 * morph);
-  vec3 target = center + vec3(aTarget * uScale * 1.04, 0.35 * uScale);
-  world.xyz = mix(world.xyz, target, morph);
-
   vec3 worldNormal = normalize(mat3(modelMatrix) * n);
   vec3 viewDir = normalize(cameraPosition - world.xyz);
   vLight = max(dot(worldNormal, normalize(uKeyDir)), 0.0);
   vRim = pow(1.0 - max(dot(worldNormal, viewDir), 0.0), 2.4);
-  vFacing = mix(dot(worldNormal, viewDir), 1.0, morph);
-  vHeat = heat * (1.0 - morph);
+  vFacing = dot(worldNormal, viewDir);
+  vHeat = heat;
   vSeed = aSeed.w;
   vRing = aRing;
-  vMorph = morph;
-  vTargetColor = aTargetColor;
 
   vec4 mvPosition = viewMatrix * world;
   gl_Position = projectionMatrix * mvPosition;
   float size = uSize * (0.5 + aSeed.z * 0.95) * (1.0 + heat * 1.1 + uPulse * uEnergy * 0.3);
-  size = mix(size, uSize * 1.05, morph);
   gl_PointSize = size * uPixelRatio * uScale * (8.0 / -mvPosition.z) * mix(1.0, 0.6, 1.0 - arrival);
 }

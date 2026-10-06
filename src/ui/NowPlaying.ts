@@ -3,12 +3,12 @@ import type { PlaybackState } from '../player/PlaybackController.ts'
 import { el, setText, toggleAttr } from './dom.ts'
 import { formatTime } from './format.ts'
 import { icon } from './icons.ts'
+import { coverShown, START_HOLD_MS } from './coverReveal.ts'
 import { LiquidProgress } from './LiquidProgress.ts'
-import { cascadeText, fadeSwap, magnetize } from './motion.ts'
+import { cascadeText, fadeSwap, magnetize, reducedMotion } from './motion.ts'
 
 export class NowPlaying {
   readonly root: HTMLElement
-  readonly videoHost: HTMLElement
   private readonly app: PlayerApp
   private readonly lens: HTMLElement
   private readonly cover: HTMLImageElement
@@ -32,16 +32,21 @@ export class NowPlaying {
   private readonly scale = el('div', { class: 'seek-scale', attrs: { 'aria-hidden': 'true' } })
   private readonly liquid = new LiquidProgress()
   private seeking = false
+  private hovering = false
+  private holdUntil = 0
+  private lastNodeId: string | null = null
+  private wasPlaying = false
+  private holdPending = true
+  private revealTimer: number | undefined
+  private leaveTimer: number | undefined
+  private revealListener: ((shown: boolean) => void) | null = null
+  private lastShown: boolean | null = null
   private lastVolume = 80
 
-  constructor(app: PlayerApp, videoHost: HTMLElement) {
+  constructor(app: PlayerApp) {
     this.app = app
-    this.videoHost = videoHost
-    videoHost.className = 'lens__video'
-    videoHost.id = 'video-host'
     this.cover = el('img', { class: 'lens__cover', attrs: { alt: '', width: 240, height: 240, decoding: 'async' } })
-    this.lens = el('figure', { class: 'lens', attrs: { 'data-state': 'empty' } }, [
-      this.videoHost,
+    this.lens = el('figure', { class: 'lens', attrs: { 'data-state': 'empty', 'data-cover': 'shown' } }, [
       this.cover,
       el('figcaption', { class: 'lens__empty' }, [icon('orbit', 'icon lens__empty-icon'), this.emptyText]),
     ])
@@ -89,8 +94,62 @@ export class NowPlaying {
     this.volumeControl = el('div', { class: 'volume' }, [this.muteButton, this.volume])
     this.bind()
     for (const button of [this.playButton, this.prevButton, this.nextButton]) magnetize(button, button === this.playButton ? 7 : 5)
+    this.stage.addEventListener('pointerenter', (event) => {
+      if (event.pointerType !== 'mouse') return
+      window.clearTimeout(this.leaveTimer)
+      this.setHovering(true)
+    })
+    this.stage.addEventListener('pointerleave', (event) => {
+      if (event.pointerType !== 'mouse') return
+      window.clearTimeout(this.leaveTimer)
+      this.leaveTimer = window.setTimeout(() => this.setHovering(false), 350)
+    })
+    this.stage.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse') return
+      window.clearTimeout(this.leaveTimer)
+      this.setHovering(true)
+      this.leaveTimer = window.setTimeout(() => this.setHovering(false), 3000)
+    })
     app.playback.subscribe((state) => this.render(state))
     app.playlist.subscribe(() => this.render(app.playback.state))
+  }
+
+  onCoverReveal(listener: (shown: boolean) => void): void {
+    this.revealListener = listener
+    this.lastShown = null
+    this.evaluateReveal()
+  }
+
+  lensRect(): DOMRect | null {
+    const rect = this.lens.getBoundingClientRect()
+    return rect.width > 0 ? rect : null
+  }
+
+  private setHovering(hovering: boolean): void {
+    if (this.hovering === hovering) return
+    this.hovering = hovering
+    this.evaluateReveal()
+  }
+
+  private evaluateReveal(): void {
+    const state = this.app.playback.state
+    const scene = document.documentElement.classList.contains('has-scene')
+    const shown = coverShown({
+      hasSong: this.lens.dataset.state === 'cover',
+      playing: state.status === 'playing',
+      hovering: this.hovering,
+      now: performance.now(),
+      holdUntil: this.holdUntil,
+      reducedMotion: reducedMotion() || !scene,
+    })
+    this.lens.dataset.cover = shown ? 'shown' : 'hidden'
+    window.clearTimeout(this.revealTimer)
+    const wait = this.holdUntil - performance.now()
+    if (shown && wait > 0) this.revealTimer = window.setTimeout(() => this.evaluateReveal(), wait + 20)
+    if (shown !== this.lastShown) {
+      this.lastShown = shown
+      this.revealListener?.(shown)
+    }
   }
 
   private iconButton(name: Parameters<typeof icon>[0], label: string, extra: string): HTMLButtonElement {
@@ -129,8 +188,15 @@ export class NowPlaying {
     const node = state.nodeId ? playlist.list.findById(state.nodeId) : playlist.current
     const song = node?.value ?? null
     const playing = state.status === 'playing' || state.status === 'loading'
-    const lensState = !song ? 'empty' : state.source === 'full' ? 'video' : 'cover'
-    this.lens.dataset.state = lensState
+    this.lens.dataset.state = song ? 'cover' : 'empty'
+    const playingNow = state.status === 'playing'
+    if (state.nodeId !== this.lastNodeId) this.holdPending = true
+    if (playingNow && (this.holdPending || (!this.wasPlaying && state.currentMs < 1500))) {
+      this.holdUntil = performance.now() + START_HOLD_MS
+      this.holdPending = false
+    }
+    this.lastNodeId = state.nodeId
+    this.wasPlaying = playingNow
     this.lens.dataset.status = state.status
     if (song) {
       const src = song.artworkUrl
@@ -189,6 +255,7 @@ export class NowPlaying {
     this.volume.style.setProperty('--fill', `${state.volume}%`)
     this.muteButton.replaceChildren(icon(state.volume === 0 ? 'mute' : 'volume'))
     this.muteButton.setAttribute('aria-label', state.volume === 0 ? 'Unmute' : 'Mute')
+    this.evaluateReveal()
   }
 
   private updateSkip(button: HTMLButtonElement, enabled: boolean, reason: string, label: string): void {

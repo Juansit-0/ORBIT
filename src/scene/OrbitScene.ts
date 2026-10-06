@@ -15,6 +15,8 @@ import {
   WebGLRenderer,
 } from 'three'
 import noise from './noise.glsl?raw'
+import coverFragment from './cover.frag?raw'
+import coverVertex from './cover.vert?raw'
 import fragmentShader from './particles.frag?raw'
 import vertexSource from './particles.vert?raw'
 import { buildTargets, sampleCover } from './coverMorph.ts'
@@ -24,9 +26,10 @@ import { profileFor, pulseAt, type PulseProfile } from './pulse.ts'
 const TRAIL_LENGTH = 12
 const FOV = 35
 const CAMERA_DISTANCE = 6
-const MORPH_RISE = 0.9
-const MORPH_HOLD = 1.0
-const MORPH_FALL = 1.2
+const COVER_GRID = 72
+const DISSOLVE_SECONDS = 1.5
+const GATHER_SECONDS = 0.75
+const DISSOLVE_DELAY = 0.3
 const INTERACTIVE = 'button, input, a, label, [role="tab"], [popover], .rail, .dock, .mast, .tabs, .toast, .lens, .deck__meta, .deck__controls'
 
 export interface SceneOptions {
@@ -99,8 +102,12 @@ export class OrbitScene {
   private shock = 1
   private profile: PulseProfile = profileFor('orbit')
   private input: PlaybackInput = { playing: false, trackKey: null, positionMs: 0, artworkUrl: null }
-  private readonly sphereCount: number
-  private morphStart = -1
+  private readonly cloud: Points
+  private readonly cloudMaterial: ShaderMaterial
+  private coverMix = 0
+  private coverTarget = 0
+  private coverDelay = 0
+  private coverReady = false
   private intro = 1
   private click = new Vector4(0, 0, 0, 1)
   private readonly baseChart: Color
@@ -122,7 +129,6 @@ export class OrbitScene {
     this.camera.position.set(0, 0, CAMERA_DISTANCE)
 
     const sphereCount = options.particleCount
-    this.sphereCount = sphereCount
     this.intro = options.intro ? 0 : 1
     const ringCount = Math.round(options.particleCount * 0.2)
     const total = sphereCount + ringCount
@@ -137,8 +143,6 @@ export class OrbitScene {
     geometry.setAttribute('position', new BufferAttribute(positions, 3))
     geometry.setAttribute('aSeed', new BufferAttribute(seeds, 4))
     geometry.setAttribute('aRing', new BufferAttribute(ring, 1))
-    geometry.setAttribute('aTarget', new BufferAttribute(new Float32Array(total * 2), 2))
-    geometry.setAttribute('aTargetColor', new BufferAttribute(new Float32Array(total * 3), 3))
 
     const css = getComputedStyle(document.documentElement)
     const token = (name: string, fallback: string) => new Color(css.getPropertyValue(name).trim() || fallback)
@@ -158,7 +162,6 @@ export class OrbitScene {
         uEnergy: { value: this.energy },
         uShock: { value: 1 },
         uIntro: { value: this.intro },
-        uMorph: { value: 0 },
         uClick: { value: this.click },
         uPixelRatio: { value: this.renderer.getPixelRatio() },
         uSize: { value: 4.4 },
@@ -174,6 +177,47 @@ export class OrbitScene {
     this.points = new Points(geometry, this.material)
     this.points.frustumCulled = false
     this.scene.add(this.points)
+
+    const cells = COVER_GRID * COVER_GRID
+    const cloudGeometry = new BufferGeometry()
+    const sphere = new Float32Array(cells * 3)
+    const cloudSeeds = new Float32Array(cells)
+    for (let i = 0; i < cells; i++) {
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.acos(2 * Math.random() - 1)
+      const radius = 1 + (Math.random() - 0.5) * 0.06
+      sphere[i * 3] = Math.sin(phi) * Math.cos(theta) * radius
+      sphere[i * 3 + 1] = Math.cos(phi) * radius
+      sphere[i * 3 + 2] = Math.sin(phi) * Math.sin(theta) * radius
+      cloudSeeds[i] = Math.random()
+    }
+    cloudGeometry.setAttribute('position', new BufferAttribute(new Float32Array(cells * 3), 3))
+    cloudGeometry.setAttribute('aGrid', new BufferAttribute(new Float32Array(cells * 2), 2))
+    cloudGeometry.setAttribute('aColor', new BufferAttribute(new Float32Array(cells * 3), 3))
+    cloudGeometry.setAttribute('aSphere', new BufferAttribute(sphere, 3))
+    cloudGeometry.setAttribute('aSeed', new BufferAttribute(cloudSeeds, 1))
+    this.cloudMaterial = new ShaderMaterial({
+      vertexShader: coverVertex,
+      fragmentShader: coverFragment,
+      transparent: true,
+      depthWrite: false,
+      blending: NormalBlending,
+      uniforms: {
+        uMix: { value: 0 },
+        uHalf: { value: 1 },
+        uScale: { value: 1 },
+        uGridSize: { value: 4 },
+        uSphereSize: { value: 2 },
+        uPixelRatio: { value: this.renderer.getPixelRatio() },
+        uCenter: { value: new Vector3() },
+        uSphereMatrix: { value: this.points.matrixWorld },
+        uOpacity: { value: 0 },
+      },
+    })
+    this.cloud = new Points(cloudGeometry, this.cloudMaterial)
+    this.cloud.frustumCulled = false
+    this.cloud.renderOrder = 1
+    this.scene.add(this.cloud)
 
     this.onPointer = (event) => {
       this.pointer.set((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1)
@@ -204,50 +248,64 @@ export class OrbitScene {
     if (coverChanged || changed) void this.loadCover(input.artworkUrl, transition)
   }
 
+  setCoverShown(shown: boolean): void {
+    const target = shown ? 0 : 1
+    if (target === this.coverTarget) return
+    this.coverTarget = target
+    this.coverDelay = shown ? 0 : DISSOLVE_DELAY
+  }
+
   private async loadCover(url: string | null, transition: boolean): Promise<void> {
     const request = ++this.coverRequest
     if (!url) {
       this.targetChart.copy(this.baseChart)
       this.targetKey.copy(this.baseKey)
+      this.coverReady = false
       if (transition) this.shock = 0
       return
     }
-    const requested = performance.now()
     try {
-      const sample = await sampleCover(url)
+      const sample = await sampleCover(url, COVER_GRID)
       if (request !== this.coverRequest) return
       const vivid = sample.palette.vivid
       const chart = blend([this.baseChart.r, this.baseChart.g, this.baseChart.b], vivid, 0.55, 0.62)
       const key = blend([this.baseKey.r, this.baseKey.g, this.baseKey.b], vivid, 0.4, 0.85)
       this.targetChart.setRGB(...chart)
       this.targetKey.setRGB(...key)
-      if (!transition) return
-      if (performance.now() - requested > 1800) {
-        this.shock = 0
-        return
-      }
-      const targets = buildTargets(this.sphereCount, sample)
-      const geometry = this.points.geometry
-      const position = geometry.getAttribute('aTarget') as BufferAttribute
-      const color = geometry.getAttribute('aTargetColor') as BufferAttribute
-      ;(position.array as Float32Array).set(targets.positions)
+      const targets = buildTargets(COVER_GRID * COVER_GRID, sample)
+      const geometry = this.cloud.geometry
+      const grid = geometry.getAttribute('aGrid') as BufferAttribute
+      const color = geometry.getAttribute('aColor') as BufferAttribute
+      ;(grid.array as Float32Array).set(targets.positions)
       ;(color.array as Float32Array).set(targets.colors)
-      position.needsUpdate = true
+      grid.needsUpdate = true
       color.needsUpdate = true
-      this.morphStart = performance.now()
+      this.coverReady = true
     } catch {
+      this.coverReady = false
       if (request === this.coverRequest && transition) this.shock = 0
     }
   }
 
-  private morphValue(now: number): number {
-    if (this.morphStart < 0) return 0
-    const t = (now - this.morphStart) / 1000
-    if (t < MORPH_RISE) return t / MORPH_RISE
-    if (t < MORPH_RISE + MORPH_HOLD) return 1
-    if (t < MORPH_RISE + MORPH_HOLD + MORPH_FALL) return 1 - (t - MORPH_RISE - MORPH_HOLD) / MORPH_FALL
-    this.morphStart = -1
-    return 0
+  private updateCover(delta: number, lens: DOMRect | null, worldPerPixel: number): void {
+    if (this.coverDelay > 0) this.coverDelay = Math.max(0, this.coverDelay - delta)
+    else if (this.coverMix < this.coverTarget) this.coverMix = Math.min(1, this.coverMix + delta / DISSOLVE_SECONDS)
+    else if (this.coverMix > this.coverTarget) this.coverMix = Math.max(0, this.coverMix - delta / GATHER_SECONDS)
+    const uniforms = this.cloudMaterial.uniforms
+    uniforms.uMix!.value = this.coverMix
+    const visible = this.coverTarget === 1 ? 1 : Math.min(1, this.coverMix * 5)
+    uniforms.uOpacity!.value = this.coverReady && lens ? visible : 0
+    if (!lens) return
+    const half = (lens.width / 2) * worldPerPixel * 0.96
+    uniforms.uHalf!.value = half
+    uniforms.uScale!.value = this.points.scale.x
+    uniforms.uGridSize!.value = (lens.width / COVER_GRID) * 1.45
+    uniforms.uSphereSize!.value = 2.2
+    ;(uniforms.uCenter!.value as Vector3).set(
+      (lens.left + lens.width / 2 - window.innerWidth / 2) * worldPerPixel,
+      -(lens.top + lens.height / 2 - window.innerHeight / 2) * worldPerPixel,
+      0,
+    )
   }
 
   private hitTest(reach: number): Vector3 | null {
@@ -267,6 +325,8 @@ export class OrbitScene {
     document.removeEventListener('visibilitychange', this.onVisibility)
     this.points.geometry.dispose()
     this.material.dispose()
+    this.cloud.geometry.dispose()
+    this.cloudMaterial.dispose()
     this.renderer.dispose()
   }
 
@@ -365,7 +425,9 @@ export class OrbitScene {
     uniforms.uEnergy!.value = this.energy
     uniforms.uShock!.value = this.shock
     uniforms.uIntro!.value = this.intro
-    uniforms.uMorph!.value = this.morphValue(now)
+    this.points.updateMatrixWorld()
+    const lens = this.anchor.querySelector('.lens')?.getBoundingClientRect() ?? null
+    this.updateCover(delta, lens && lens.width > 0 ? lens : null, (2 * CAMERA_DISTANCE * Math.tan((FOV * Math.PI) / 360)) / window.innerHeight)
     this.renderer.render(this.scene, this.camera)
   }
 }

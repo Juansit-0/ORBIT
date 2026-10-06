@@ -20,7 +20,12 @@ function firstVisit(): boolean {
   }
 }
 
-export function mountScene(anchor: HTMLElement, playlist: Playlist, playback: PlaybackController): void {
+export function mountScene(
+  anchor: HTMLElement,
+  playlist: Playlist,
+  playback: PlaybackController,
+  onReady: (scene: { setCoverShown(shown: boolean): void }) => void,
+): void {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
   if (reduced.matches || !webglAvailable() || import.meta.env.VITE_PLAYER === 'fake') return
   const start = () => {
@@ -50,6 +55,7 @@ export function mountScene(anchor: HTMLElement, playlist: Playlist, playback: Pl
       }
       playback.subscribe(sync)
       document.documentElement.classList.add('has-scene')
+      onReady(scene)
       requestAnimationFrame(() => canvas.classList.add('scene--ready'))
       reduced.addEventListener('change', (event) => {
         if (event.matches) {
