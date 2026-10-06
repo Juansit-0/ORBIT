@@ -25,6 +25,7 @@ export class NowPlaying {
   private readonly muteButton: HTMLButtonElement
   private readonly emptyText = el('span', { text: 'Nothing in orbit yet' })
   readonly volumeControl: HTMLElement
+  readonly stage: HTMLElement
   private seeking = false
   private lastVolume = 80
 
@@ -59,7 +60,7 @@ export class NowPlaying {
       attrs: { type: 'range', min: 0, max: 100, step: 1, value: 80, 'aria-label': 'Volume' },
     })
     this.root = el('main', { class: 'deck', attrs: { id: 'panel-now', 'aria-label': 'Now playing' } }, [
-      el('div', { class: 'deck__stage' }, [this.lens]),
+      (this.stage = el('div', { class: 'deck__stage' }, [this.lens])),
       el('div', { class: 'deck__meta' }, [
         el('p', { class: 'clock', attrs: { 'aria-label': 'Elapsed time' } }, [
           el('span', { class: 'clock__label', text: 'T+' }),
