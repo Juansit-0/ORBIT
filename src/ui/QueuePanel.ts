@@ -66,7 +66,7 @@ export class QueuePanel {
       itemSelector: '.waypoint',
       onDrop: (from, to) => {
         this.suppressFlip = true
-        this.app.move(from, to)
+        void this.app.move(from, to)
       },
     })
     app.playlist.subscribe(() => this.render())
@@ -166,13 +166,13 @@ export class QueuePanel {
       refs.remove,
     )
     refs.main.addEventListener('click', () => void this.app.play(node.id))
-    refs.up.addEventListener('click', () => this.moveBy(node.id, -1))
-    refs.down.addEventListener('click', () => this.moveBy(node.id, 1))
+    refs.up.addEventListener('click', () => void this.moveBy(node.id, -1))
+    refs.down.addEventListener('click', () => void this.moveBy(node.id, 1))
     refs.remove.addEventListener('click', () => this.removeRow(node.id))
     refs.row.addEventListener('keydown', (event) => {
       if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
         event.preventDefault()
-        this.moveBy(node.id, event.key === 'ArrowUp' ? -1 : 1)
+        void this.moveBy(node.id, event.key === 'ArrowUp' ? -1 : 1)
       } else if (event.key === 'Delete' || event.key === 'Backspace') {
         if (event.target === refs.main) {
           event.preventDefault()
@@ -206,10 +206,10 @@ export class QueuePanel {
     toggleAttr(refs.down, 'disabled', index === size - 1)
   }
 
-  private moveBy(nodeId: string, delta: number): void {
+  private async moveBy(nodeId: string, delta: number): Promise<void> {
     const index = this.app.playlist.list.indexOfId(nodeId)
     if (index === -1) return
-    this.app.move(index, index + delta)
+    await this.app.move(index, index + delta)
     const refs = this.rows.get(nodeId)
     const target = delta < 0 ? refs?.up : refs?.down
     if (target && !target.disabled) target.focus()

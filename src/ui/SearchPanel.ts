@@ -208,8 +208,8 @@ export class SearchPanel {
         insertInput.select()
       }
     }
-    firstButton.addEventListener('click', () => this.app.addFirst(song))
-    lastButton.addEventListener('click', () => this.app.addLast(song))
+    firstButton.addEventListener('click', () => void this.app.addFirst(song))
+    lastButton.addEventListener('click', () => void this.app.addLast(song))
     atButton.addEventListener('click', () => setOpen(!item.classList.contains('result--inserting')))
     insertForm.querySelector('.insert__cancel')?.addEventListener('click', () => {
       setOpen(false)

@@ -35,7 +35,7 @@ test.describe('undo and redo', () => {
     await undo.click()
     await undo.click()
     await undo.click()
-    expect(await orbit.titles()).toEqual(demoTitles)
+    await expect.poll(() => orbit.titles()).toEqual(demoTitles)
     await expect(undo).toBeDisabled()
     await expect(orbit.page.locator('.mast').getByRole('button', { name: 'Redo' })).toBeEnabled()
   })
@@ -48,6 +48,17 @@ test.describe('undo and redo', () => {
     await orbit.page.locator('.mast').getByRole('button', { name: 'Undo' }).click()
     await expect.poll(() => orbit.currentTitle()).toBe('Get Lucky')
     expect(await orbit.titles()).toEqual(demoTitles)
+  })
+
+  test('rapid keyboard undos are all applied', async ({ orbit }) => {
+    await orbit.rowAction('Dreams', /Remove Dreams/)
+    await orbit.rowAction('Get Lucky', /Remove Get Lucky/)
+    await orbit.rowAction('Levitating', /Remove Levitating/)
+    await orbit.page.locator('body').click({ position: { x: 5, y: 5 } })
+    await orbit.page.keyboard.press('ControlOrMeta+z')
+    await orbit.page.keyboard.press('ControlOrMeta+z')
+    await orbit.page.keyboard.press('ControlOrMeta+z')
+    await expect.poll(() => orbit.titles()).toEqual(demoTitles)
   })
 
   test('a new change clears the redo branch', async ({ orbit }) => {

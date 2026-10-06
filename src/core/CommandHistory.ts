@@ -13,7 +13,7 @@ export class CommandHistory {
   private readonly undone = new DoublyLinkedList<Command>()
   private readonly listeners = new Set<HistoryListener>()
   private readonly limit: number
-  private busy = false
+  private queue: Promise<unknown> = Promise.resolve()
 
   constructor(limit = 50) {
     this.limit = limit
@@ -44,9 +44,11 @@ export class CommandHistory {
     return () => this.listeners.delete(listener)
   }
 
-  async run(command: Command): Promise<void> {
-    await command.execute()
-    this.record(command)
+  run(command: Command): Promise<void> {
+    return this.enqueue(async () => {
+      await command.execute()
+      this.record(command)
+    })
   }
 
   record(command: Command): void {
@@ -56,34 +58,38 @@ export class CommandHistory {
     this.emit()
   }
 
-  async undo(): Promise<Command | null> {
-    if (this.busy) return null
-    const command = this.done.removeLast()
-    if (!command) return null
-    this.busy = true
-    try {
-      await command.revert()
-      this.undone.addLast(command)
-    } finally {
-      this.busy = false
-      this.emit()
-    }
-    return command
+  undo(): Promise<Command | null> {
+    return this.enqueue(async () => {
+      const command = this.done.removeLast()
+      if (!command) return null
+      try {
+        await command.revert()
+        this.undone.addLast(command)
+      } finally {
+        this.emit()
+      }
+      return command
+    })
   }
 
-  async redo(): Promise<Command | null> {
-    if (this.busy) return null
-    const command = this.undone.removeLast()
-    if (!command) return null
-    this.busy = true
-    try {
-      await command.execute()
-      this.done.addLast(command)
-    } finally {
-      this.busy = false
-      this.emit()
-    }
-    return command
+  redo(): Promise<Command | null> {
+    return this.enqueue(async () => {
+      const command = this.undone.removeLast()
+      if (!command) return null
+      try {
+        await command.execute()
+        this.done.addLast(command)
+      } finally {
+        this.emit()
+      }
+      return command
+    })
+  }
+
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const next = this.queue.then(task, task)
+    this.queue = next.catch(() => undefined)
+    return next
   }
 
   clear(): void {
