@@ -131,6 +131,8 @@ export class OrbitPage {
   }
 
   async fakeFinish(): Promise<void> {
+    await expect(this.page.locator('.play')).toHaveAttribute('aria-label', 'Pause')
+    await expect.poll(() => this.page.evaluate(() => window.orbitFakePlayer?.playing ?? false)).toBe(true)
     await this.page.evaluate(() => window.orbitFakePlayer?.finish())
   }
 

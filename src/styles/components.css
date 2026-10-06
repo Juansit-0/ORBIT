@@ -241,7 +241,7 @@
 }
 
 .result--inserting .chip:not([aria-expanded='true']) {
-  background: var(--paper);
+  background: var(--mist);
 }
 
 .result__cover {
@@ -290,10 +290,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--paper);
-  box-shadow: var(--shadow-1);
+  padding: var(--space-3) 0 0;
+  border-top: 1px dashed var(--rule-strong);
   transform-origin: top center;
   animation: unfold var(--dur-3) var(--ease-out);
 }
@@ -434,16 +432,12 @@
 .waypoint {
   position: relative;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 26px 14px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--space-2);
   padding: 6px var(--space-2);
   border-radius: var(--radius-md);
   transition: background-color var(--dur-2) var(--ease-out);
-}
-
-.waypoint[hidden] {
-  display: none;
 }
 
 .waypoint:hover,
@@ -459,23 +453,62 @@
   font-family: var(--font-mono);
   font-size: var(--text-mono);
   color: var(--ink-2);
-  text-align: right;
 }
 
-.waypoint[aria-current='true'] .waypoint__pos {
+.waypoint[aria-current='true'] .waypoint__num {
   color: var(--burn-ink);
   font-weight: 700;
 }
 
-.waypoint[data-playing='true'] .waypoint__pos::before {
+.waypoint__dot {
+  position: relative;
+  align-self: stretch;
+}
+
+.waypoint__dot::before {
   content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 4px;
+  position: absolute;
+  top: -10px;
+  bottom: -10px;
+  left: 50%;
+  width: 2px;
+  background: var(--chart-soft);
+  transform: translateX(-50%);
+}
+
+.waypoint:first-child .waypoint__dot::before {
+  top: 50%;
+}
+
+.waypoint:last-child .waypoint__dot::before {
+  bottom: 50%;
+}
+
+.waypoint:only-child .waypoint__dot::before {
+  display: none;
+}
+
+.waypoint__dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--chart);
   border-radius: 50%;
+  background: var(--paper);
+  transform: translate(-50%, -50%);
+}
+
+.waypoint[aria-current='true'] .waypoint__dot::after {
+  width: 14px;
+  height: 14px;
+  border-color: var(--burn-press);
   background: var(--burn);
-  vertical-align: middle;
+}
+
+.waypoint[data-playing='true'] .waypoint__dot::after {
   animation: signal 1.2s var(--ease-in-out) infinite;
 }
 
@@ -533,57 +566,98 @@
   font-weight: 700;
 }
 
-.waypoint__status[hidden] {
-  display: none;
-}
-
 .waypoint[data-unavailable='true'] .waypoint__title {
   text-decoration: line-through;
   text-decoration-color: var(--danger);
+}
+
+.waypoint[data-unavailable='true'] .waypoint__dot::after {
+  border-color: var(--danger);
+  border-style: dashed;
+}
+
+.waypoint__end {
+  display: grid;
+  place-items: center end;
+}
+
+.waypoint__end > * {
+  grid-area: 1 / 1;
 }
 
 .waypoint__time {
   font-family: var(--font-mono);
   font-size: var(--text-mono);
   color: var(--ink-2);
+  transition: opacity var(--dur-2) var(--ease-out);
 }
 
-.waypoint__actions {
+.waypoint__moves {
   display: flex;
-  align-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--row-bg, var(--sky));
+  transition: opacity var(--dur-2) var(--ease-out);
 }
 
 .waypoint__remove {
-  margin-left: var(--space-2);
+  margin-left: var(--space-3);
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .waypoint__actions {
-    position: absolute;
-    top: 50%;
-    right: var(--space-1);
-    padding-left: var(--space-4);
-    background: linear-gradient(to right, transparent, var(--row-bg, var(--sky)) var(--space-4));
+  .waypoint__moves {
     opacity: 0;
     pointer-events: none;
-    transform: translateY(-50%);
-    transition: opacity var(--dur-2) var(--ease-out);
   }
 
   .waypoint[aria-current='true'] {
     --row-bg: var(--burn-wash);
   }
 
-  .waypoint:hover .waypoint__actions,
-  .waypoint:focus-within .waypoint__actions {
+  .waypoint:hover .waypoint__moves,
+  .waypoint:focus-within .waypoint__moves {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .waypoint:hover .waypoint__time,
+  .waypoint:focus-within .waypoint__time {
+    opacity: 0;
+  }
+
+  .waypoint__remove {
+    color: var(--ink-2);
   }
 }
 
 @media not ((hover: hover) and (pointer: fine)) {
   .waypoint {
-    grid-template-columns: 28px minmax(0, 1fr) auto auto;
+    grid-template-columns: 26px 14px minmax(0, 1fr) auto auto;
+    gap: 6px;
+  }
+
+  .waypoint__end {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .waypoint__end > * {
+    grid-area: auto;
+  }
+
+  .waypoint__pos {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0;
+  }
+
+  .waypoint__grip {
+    display: none;
+  }
+
+  .waypoint__remove {
+    margin-left: var(--space-1);
   }
 }
 
@@ -592,10 +666,11 @@
   display: grid;
   place-items: center;
   flex: 1 1 0;
-  min-height: 150px;
-  max-height: 380px;
+  min-height: 200px;
+  max-height: 400px;
   max-width: 100%;
   aspect-ratio: 1;
+  margin-bottom: var(--space-2);
 }
 
 .deck__stage::before,
@@ -618,7 +693,7 @@
 
 .lens {
   position: relative;
-  width: min(240px, 63%);
+  width: clamp(150px, 54%, 220px);
   aspect-ratio: 1;
   margin: 0;
   border-radius: 28px;
@@ -643,6 +718,10 @@
   height: 100%;
   border: 0;
   transform: translateX(-50%);
+}
+
+.lens[data-state='video'] {
+  width: clamp(200px, 60%, 240px);
 }
 
 .lens[data-state='video'] .lens__video {
@@ -912,13 +991,14 @@
 
 .toasts {
   position: fixed;
-  top: 72px;
-  right: var(--space-5);
+  top: var(--space-3);
+  left: 50%;
   z-index: 50;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  width: min(380px, calc(100% - 32px));
+  width: min(400px, calc(100% - 32px));
+  transform: translateX(-50%);
   pointer-events: none;
 }
 
@@ -930,7 +1010,7 @@
   padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--paper);
-  box-shadow: var(--shadow-3);
+  box-shadow: 0 0 0 1px var(--rule), var(--shadow-2);
   pointer-events: auto;
   animation: toast-in var(--dur-3) var(--ease-out);
 }
@@ -1003,16 +1083,19 @@
 
 @media (max-width: 920px) {
   .toasts {
-    top: auto;
-    right: auto;
-    left: 50%;
-    bottom: calc(76px + env(safe-area-inset-bottom));
-    flex-direction: column-reverse;
-    transform: translateX(-50%);
+    top: max(var(--space-2), env(safe-area-inset-top));
   }
 
   .deck__stage {
     max-height: 300px;
+    margin-bottom: 0;
+  }
+
+  .deck__artist {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .volume {
@@ -1083,14 +1166,13 @@
 }
 
 @media (max-width: 480px) {
-  .waypoint__time {
-    display: none;
+  .waypoint__cover {
+    width: 34px;
+    height: 34px;
   }
 
-  @media not ((hover: hover) and (pointer: fine)) {
-    .waypoint {
-      grid-template-columns: 24px minmax(0, 1fr) auto;
-    }
+  .waypoint__main {
+    gap: var(--space-2);
   }
 }
 
@@ -1115,4 +1197,28 @@
 .chain .node,
 .waypoint {
   will-change: auto;
+}
+
+.seek {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+}
+
+.seek-scale {
+  height: 6px;
+  margin-inline: 8px;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--rule-strong) 0 1px,
+      transparent 1px calc((100% - 1px) / var(--minutes, 4))
+    ),
+    repeating-linear-gradient(
+      to right,
+      var(--rule) 0 1px,
+      transparent 1px calc((100% - 1px) / (var(--minutes, 4) * 4))
+    );
+  background-size: 100% 6px, 100% 3px;
+  background-repeat: no-repeat;
 }

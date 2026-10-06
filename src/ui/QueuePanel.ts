@@ -148,9 +148,13 @@ export class QueuePanel {
         refs.position,
         icon('grip', 'icon waypoint__grip'),
       ]),
+      el('span', { class: 'waypoint__dot', attrs: { 'aria-hidden': 'true' } }),
       refs.main,
-      refs.time,
-      el('span', { class: 'waypoint__actions' }, [refs.up, refs.down, refs.remove]),
+      el('span', { class: 'waypoint__end' }, [
+        refs.time,
+        el('span', { class: 'waypoint__moves' }, [refs.up, refs.down]),
+      ]),
+      refs.remove,
     )
     refs.main.addEventListener('click', () => void this.app.play(node.id))
     refs.up.addEventListener('click', () => this.moveBy(node.id, -1))

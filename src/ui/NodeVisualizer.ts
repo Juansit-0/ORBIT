@@ -6,9 +6,8 @@ import { drawLinks, FlipTracker, popIn } from './motion.ts'
 import type { PlaylistChange } from '../core/Playlist.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
-const PX_PER_SECOND = 0.42
-const MIN_WIDTH = 104
-const MAX_WIDTH = 196
+const MIN_GROW = 1
+const MAX_GROW = 4
 
 interface NodeRefs {
   item: HTMLLIElement
@@ -20,16 +19,17 @@ interface NodeRefs {
 
 function linkGlyph(): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, 'svg')
-  svg.setAttribute('viewBox', '0 0 44 28')
+  svg.setAttribute('viewBox', '0 0 24 18')
   svg.setAttribute('class', 'link__glyph')
   svg.setAttribute('aria-hidden', 'true')
   svg.innerHTML =
-    '<path class="link__next" d="M3 9h34m-5-4 5 4-5 4"/><path class="link__prev" d="M41 19H7m5-4-5 4 5 4"/>'
+    '<path class="link__next" d="M2 5h19m-3-3 3 3-3 3"/><path class="link__prev" d="M22 13H3m3-3-3 3 3 3"/>'
   return svg
 }
 
-export function nodeWidth(durationMs: number): number {
-  return Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, (durationMs / 1000) * PX_PER_SECOND)))
+export function nodeGrow(durationMs: number): number {
+  const minutes = Math.max(0, durationMs) / 60000
+  return Math.round(Math.min(MAX_GROW, Math.max(MIN_GROW, minutes)) * 100) / 100
 }
 
 export class NodeVisualizer {
@@ -121,18 +121,19 @@ export class NodeVisualizer {
 
   private update(refs: NodeRefs, node: SongNode, index: number, size: number): void {
     const song = node.value
-    refs.item.style.setProperty('--node-width', `${nodeWidth(song.durationMs)}px`)
+    refs.item.style.setProperty('--grow', String(nodeGrow(song.durationMs)))
     refs.item.dataset.head = String(index === 0)
     refs.item.dataset.tail = String(index === size - 1)
     refs.item.dataset.unavailable = String(Boolean(song.unavailable))
-    setText(refs.index, `[${index}]`)
+    setText(refs.index, `#${index + 1}`)
     setText(refs.title, song.title)
+    refs.button.title = `#${index + 1} ${song.title}`
     setText(refs.time, formatTime(song.durationMs))
     const prev = node.prev?.value.title ?? 'null'
     const next = node.next?.value.title ?? 'null'
     refs.button.setAttribute(
       'aria-label',
-      `Node ${index}: ${song.title}. prev ${prev}, next ${next}.${index === 0 ? ' Head.' : ''}${index === size - 1 ? ' Tail.' : ''} Play.`,
+      `Node ${index + 1} of ${size}: ${song.title}. prev ${prev}, next ${next}.${index === 0 ? ' Head.' : ''}${index === size - 1 ? ' Tail.' : ''} Play.`,
     )
   }
 

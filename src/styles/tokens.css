@@ -14,6 +14,9 @@
   --chart: #1f6fad;
   --chart-soft: #5ba8e0;
   --chart-wash: #d6e8f6;
+  --rule: rgb(16 50 74 / 0.16);
+  --rule-strong: rgb(16 50 74 / 0.34);
+  --tick: var(--chart);
   --danger: #b3261e;
   --danger-wash: #fde8e6;
   --success: #1d6b45;

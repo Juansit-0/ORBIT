@@ -180,7 +180,7 @@ export class SearchPanel {
     const atButton = el('button', {
       class: 'chip',
       attrs: { type: 'button', 'aria-expanded': 'false', 'aria-label': `Insert ${label} at a position` },
-    }, [icon('insert'), el('span', { text: 'At…' })])
+    }, [icon('insert'), el('span', { text: 'At #' })])
     const firstButton = el('button', {
       class: 'chip',
       attrs: { type: 'button', 'aria-label': `Add ${label} at the start` },
