@@ -67,7 +67,7 @@ describe('PlaybackController', () => {
   let playlist: Playlist
   let full: StubPlayer
   let preview: StubPlayer
-  let resolve: ReturnType<typeof vi.fn<(song: Song, signal: AbortSignal) => Promise<string>>>
+  let resolve: ReturnType<typeof vi.fn<(song: Song, signal: AbortSignal) => Promise<string[]>>>
   let controller: PlaybackController
   let notices: PlaybackNotice[]
 
@@ -76,7 +76,7 @@ describe('PlaybackController', () => {
     for (const id of ['a', 'b', 'c']) playlist.addLast({ ...song(id), previewUrl: `https://p/${id}` })
     full = new StubPlayer()
     preview = new StubPlayer()
-    resolve = vi.fn(async (s: Song) => `v-${s.id}`)
+    resolve = vi.fn(async (s: Song) => [`v-${s.id}`, `v-${s.id}-alt`])
     controller = new PlaybackController(playlist, { full, preview, resolve })
     notices = []
     controller.onNotice((notice) => notices.push(notice))
@@ -145,11 +145,56 @@ describe('PlaybackController', () => {
     expect(full.loaded?.videoId).toBe('v-b')
   })
 
-  it('skips to the next song when the player reports an error', async () => {
+  it('tries the next video candidate when YouTube refuses to embed one', async () => {
     await controller.togglePlay()
     full.emitter.emit({ type: 'error', reason: 'unplayable' })
     await flush()
+    expect(full.loaded?.videoId).toBe('v-a-alt')
+    expect(playlist.current?.value.id).toBe('a')
+    expect(playlist.current?.value.videoId).toBe('v-a-alt')
+  })
+
+  it('falls back to the preview when every candidate is blocked', async () => {
+    await controller.togglePlay()
+    full.emitter.emit({ type: 'error', reason: 'unplayable' })
+    await flush()
+    full.emitter.emit({ type: 'error', reason: 'unplayable' })
+    await flush()
+    expect(preview.loaded?.previewUrl).toBe('https://p/a')
+    expect(controller.state.source).toBe('preview')
+    expect(notices.at(-1)).toMatchObject({ type: 'preview', reason: 'blocked' })
+    expect(playlist.current?.value.unavailable).toBeUndefined()
+  })
+
+  it('skips the song when blocked everywhere and no preview exists', async () => {
+    playlist.list.head!.value = song('a')
+    resolve.mockResolvedValueOnce(['only'])
+    await controller.togglePlay()
+    full.emitter.emit({ type: 'error', reason: 'unplayable' })
+    await flush()
+    expect(playlist.list.head?.value.unavailable).toBe(true)
     expect(full.loaded?.videoId).toBe('v-b')
+  })
+
+  it('marks a song unavailable when even its preview fails', async () => {
+    resolve.mockRejectedValueOnce(new ServiceError('quota', 'quota'))
+    await controller.togglePlay()
+    preview.emitter.emit({ type: 'error', reason: 'network' })
+    await flush()
+    expect(playlist.list.head?.value.unavailable).toBe(true)
+  })
+
+  it('gives an unavailable song another try when it is played on purpose', async () => {
+    playlist.updateSong(playlist.list.head!.id, { unavailable: true })
+    await controller.playNode(playlist.list.head!.id)
+    expect(full.loaded?.videoId).toBe('v-a')
+    expect(playlist.list.head?.value.unavailable).toBe(false)
+  })
+
+  it('tries the remembered working video first', async () => {
+    playlist.updateSong(playlist.list.head!.id, { videoId: 'v-a-alt' })
+    await controller.togglePlay()
+    expect(full.loaded?.videoId).toBe('v-a-alt')
   })
 
   it('stops when every song is unavailable', async () => {
@@ -185,11 +230,11 @@ describe('PlaybackController', () => {
   })
 
   it('ignores stale resolves when the user skips quickly', async () => {
-    let release: (value: string) => void = () => {}
+    let release: (value: string[]) => void = () => {}
     resolve.mockImplementationOnce(() => new Promise((r) => (release = r)))
     const first = controller.togglePlay()
     await controller.next()
-    release('stale')
+    release(['stale'])
     await first
     expect(full.loaded?.videoId).toBe('v-b')
   })

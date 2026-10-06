@@ -197,7 +197,11 @@ export class Playlist {
   restore(snapshot: PlaylistSnapshot): void {
     this.list.clear()
     this.order = null
-    for (const song of snapshot.songs) this.list.addLast(song)
+    for (const song of snapshot.songs) {
+      const { unavailable, ...rest } = song
+      void unavailable
+      this.list.addLast(rest)
+    }
     this.current = this.list.getNode(snapshot.currentIndex)
     this.repeat = REPEAT_CYCLE.includes(snapshot.repeat) ? snapshot.repeat : 'off'
     if (snapshot.shuffle) this.order = this.buildShuffleOrder()

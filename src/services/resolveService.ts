@@ -4,22 +4,25 @@ import { readJson, writeJson } from './storage.ts'
 
 const CACHE_KEY = 'orbit:v1:videos'
 
-function readCache(): Record<string, string> {
-  return readJson<Record<string, string>>(CACHE_KEY) ?? {}
+function readCache(): Record<string, string | string[]> {
+  return readJson<Record<string, string | string[]>>(CACHE_KEY) ?? {}
 }
 
-export function cachedVideoId(song: Song): string | undefined {
-  return song.videoId ?? readCache()[song.id]
+function cached(song: Song): string[] {
+  const entry = readCache()[song.id]
+  if (!entry) return []
+  return Array.isArray(entry) ? entry.filter((id) => typeof id === 'string') : []
 }
 
-export async function resolveVideoId(song: Song, signal?: AbortSignal): Promise<string> {
-  const cached = cachedVideoId(song)
-  if (cached) return cached
-  const { videoId } = await getJson<{ videoId: string }>(
+export async function resolveVideoIds(song: Song, signal?: AbortSignal): Promise<string[]> {
+  const known = cached(song)
+  if (known.length > 0) return known
+  const { videoId, candidates } = await getJson<{ videoId: string; candidates?: string[] }>(
     '/api/resolve',
     { title: song.title, artist: song.artist, durationMs: String(song.durationMs) },
     signal,
   )
-  writeJson(CACHE_KEY, { ...readCache(), [song.id]: videoId })
-  return videoId
+  const ids = candidates && candidates.length > 0 ? candidates : [videoId]
+  writeJson(CACHE_KEY, { ...readCache(), [song.id]: ids })
+  return ids
 }

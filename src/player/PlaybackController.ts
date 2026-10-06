@@ -17,13 +17,13 @@ export interface PlaybackState {
 
 export type PlaybackNotice =
   | { type: 'unavailable'; song: Song }
-  | { type: 'preview'; song: Song; reason: 'quota' | 'missing_key' | 'network' | 'not_found' }
+  | { type: 'preview'; song: Song; reason: 'quota' | 'missing_key' | 'network' | 'not_found' | 'blocked' }
   | { type: 'all_unavailable' }
 
 export interface PlaybackDeps {
   full: PlayerAdapter
   preview: PlayerAdapter
-  resolve: (song: Song, signal: AbortSignal) => Promise<string>
+  resolve: (song: Song, signal: AbortSignal) => Promise<string[]>
 }
 
 type StateListener = (state: PlaybackState) => void
@@ -40,6 +40,7 @@ export class PlaybackController {
   private abort: AbortController | null = null
   private failures = 0
   private stopAfter = false
+  private readonly attempts = new Map<string, { ids: string[]; index: number }>()
   private readonly endListeners = new Set<() => void>()
   private snapshot: PlaybackState = {
     status: 'idle',
@@ -80,7 +81,13 @@ export class PlaybackController {
 
   async playNode(nodeId: string): Promise<void> {
     const node = this.playlist.select(nodeId)
-    if (node) await this.load(node, true)
+    if (!node) return
+    if (node.value.unavailable) {
+      this.attempts.delete(node.id)
+      this.playlist.updateSong(node.id, { unavailable: false })
+    }
+    this.failures = 0
+    await this.load(node, true)
   }
 
   async togglePlay(): Promise<void> {
@@ -191,10 +198,10 @@ export class PlaybackController {
     this.loadedNodeId = null
     this.update({ status: 'loading', nodeId: node.id, currentMs: 0, durationMs: song.durationMs, source: null })
     if (song.unavailable) return this.skipUnavailable(node)
-    let videoId: string | null = null
+    let ids: string[] = []
     let fallbackReason: 'quota' | 'missing_key' | 'network' | 'not_found' | null = null
     try {
-      videoId = song.videoId ?? (await this.deps.resolve(song, abort.signal))
+      ids = await this.deps.resolve(song, abort.signal)
     } catch (error) {
       if (token !== this.loadToken) return
       const kind = error instanceof ServiceError ? error.kind : 'network'
@@ -202,13 +209,26 @@ export class PlaybackController {
       fallbackReason = kind === 'quota' || kind === 'missing_key' || kind === 'not_found' ? kind : 'network'
     }
     if (token !== this.loadToken) return
+    if (song.videoId) ids = [song.videoId, ...ids.filter((id) => id !== song.videoId)]
+    const videoId = ids[0]
     if (videoId) {
-      if (!song.videoId) this.playlist.updateSong(node.id, { videoId })
+      this.attempts.set(node.id, { ids, index: 0 })
+      if (song.videoId !== videoId) this.playlist.updateSong(node.id, { videoId })
       await this.start(this.deps.full, { videoId, durationMs: song.durationMs }, node, 'full', autoplay, token)
       return
     }
+    await this.fallbackToPreview(node, fallbackReason ?? 'network', autoplay, token)
+  }
+
+  private async fallbackToPreview(
+    node: SongNode,
+    reason: 'quota' | 'missing_key' | 'network' | 'not_found' | 'blocked',
+    autoplay: boolean,
+    token: number,
+  ): Promise<void> {
+    const song = node.value
     if (song.previewUrl) {
-      this.notify({ type: 'preview', song, reason: fallbackReason ?? 'network' })
+      this.notify({ type: 'preview', song, reason })
       await this.start(
         this.deps.preview,
         { previewUrl: song.previewUrl, durationMs: 30000 },
@@ -279,8 +299,27 @@ export class PlaybackController {
       void this.handleEnded()
     } else if (event.type === 'error') {
       const node = this.playlist.current
-      if (node && node.id === this.loadedNodeId) this.markUnavailable(node)
+      if (node && node.id === this.loadedNodeId) void this.recover(node)
     }
+  }
+
+  private async recover(node: SongNode): Promise<void> {
+    const token = this.loadToken
+    if (this.snapshot.source === 'preview') {
+      this.markUnavailable(node)
+      return
+    }
+    const attempt = this.attempts.get(node.id)
+    const nextId = attempt ? attempt.ids[attempt.index + 1] : undefined
+    if (attempt && nextId) {
+      attempt.index += 1
+      this.playlist.updateSong(node.id, { videoId: nextId })
+      this.update({ status: 'loading' })
+      await this.start(this.deps.full, { videoId: nextId, durationMs: node.value.durationMs }, node, 'full', true, token)
+      return
+    }
+    this.attempts.delete(node.id)
+    await this.fallbackToPreview(node, 'blocked', true, token)
   }
 
   private async handleEnded(): Promise<void> {
