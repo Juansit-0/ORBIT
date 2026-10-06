@@ -1,5 +1,6 @@
 import type { PlaybackController } from '../player/PlaybackController.ts'
 import type { Playlist } from '../core/Playlist.ts'
+import type { AudioFeatures } from '../audio/analysis.ts'
 
 function webglAvailable(): boolean {
   try {
@@ -24,7 +25,7 @@ export function mountScene(
   anchor: HTMLElement,
   playlist: Playlist,
   playback: PlaybackController,
-  onReady: (scene: { setCoverShown(shown: boolean): void }) => void,
+  onReady: (scene: { setCoverShown(shown: boolean): void; setAudio(provider: () => AudioFeatures | null): void }) => void,
 ): void {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
   if (reduced.matches || !webglAvailable() || import.meta.env.VITE_PLAYER === 'fake') return

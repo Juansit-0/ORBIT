@@ -9,6 +9,7 @@ varying float vHeat;
 varying float vFacing;
 varying float vSeed;
 varying float vRing;
+varying float vSpark;
 uniform float uPaletteMix;
 varying vec3 vPalette;
 
@@ -26,10 +27,12 @@ void main() {
   color = mix(color, mix(uBurn, uKey, vSeed * 0.4), vRing);
   color = mix(color, uBurn, smoothstep(0.05, 0.55, vHeat));
 
+  color = mix(color, mix(uKey, vec3(1.0, 0.96, 0.9), 0.4), clamp(vSpark * 1.2, 0.0, 0.85));
   float depth = smoothstep(-0.7, 0.55, vFacing);
   float alpha = soft * mix(0.18, 0.92, max(depth, vRing * 0.8));
   alpha *= 0.8 + 0.2 * vSeed;
   alpha = max(alpha, soft * clamp(vHeat, 0.0, 1.0));
+  alpha = max(alpha, soft * clamp(vSpark * 1.5, 0.0, 1.0));
 
   gl_FragColor = vec4(color, alpha);
 }

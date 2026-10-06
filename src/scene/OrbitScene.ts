@@ -19,6 +19,7 @@ import coverFragment from './cover.frag?raw'
 import coverVertex from './cover.vert?raw'
 import fragmentShader from './particles.frag?raw'
 import vertexSource from './particles.vert?raw'
+import type { AudioFeatures } from '../audio/analysis.ts'
 import { buildTargets, sampleCover } from './coverMorph.ts'
 import { blend } from './palette.ts'
 import { profileFor, pulseAt, type PulseProfile } from './pulse.ts'
@@ -132,6 +133,8 @@ export class OrbitScene {
   private readonly targetChart: Color
   private readonly targetKey: Color
   private coverRequest = 0
+  private audio: (() => AudioFeatures | null) | null = null
+  private lastBeat = 0
   private inputStamp = performance.now()
   private readonly onPointer: (event: PointerEvent) => void
   private readonly onLeave: () => void
@@ -180,6 +183,10 @@ export class OrbitScene {
       uniforms: {
         uTime: { value: 0 },
         uPulse: { value: 0 },
+        uBass: { value: 0 },
+        uMid: { value: 0 },
+        uTreble: { value: 0 },
+        uBeat: { value: 0 },
         uEnergy: { value: this.energy },
         uShock: { value: 1 },
         uIntro: { value: this.intro },
@@ -276,6 +283,10 @@ export class OrbitScene {
     this.input = input
     this.inputStamp = performance.now()
     if (coverChanged || changed) void this.loadCover(input.artworkUrl, transition)
+  }
+
+  setAudio(provider: () => AudioFeatures | null): void {
+    this.audio = provider
   }
 
   setCoverShown(shown: boolean): void {
@@ -480,6 +491,21 @@ export class OrbitScene {
     const uniforms = this.material.uniforms
     uniforms.uTime!.value = elapsed
     uniforms.uPulse!.value = beat
+    const heard = this.audio?.() ?? null
+    if (heard) {
+      uniforms.uBass!.value = heard.bass
+      uniforms.uMid!.value = heard.mid
+      uniforms.uTreble!.value = heard.treble
+      uniforms.uBeat!.value = heard.beat
+      if (heard.beat >= 0.99 && this.lastBeat < 0.99 && this.shock > 0.55 && heard.bass > 0.5) this.shock = 0
+      this.lastBeat = heard.beat
+    } else {
+      uniforms.uBass!.value = beat * this.energy * 0.7
+      uniforms.uMid!.value = this.energy * 0.25
+      uniforms.uTreble!.value = 0
+      uniforms.uBeat!.value = 0
+      this.lastBeat = 0
+    }
     uniforms.uEnergy!.value = this.energy
     uniforms.uShock!.value = this.shock
     uniforms.uIntro!.value = this.intro

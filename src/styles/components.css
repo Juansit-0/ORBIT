@@ -1362,13 +1362,13 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   margin: 0;
 }
 
-.deck__lyrics {
+.deck__chip {
   min-height: 28px;
   background: var(--paper);
   box-shadow: 0 0 0 1px var(--rule);
 }
 
-.deck__lyrics[aria-pressed='true'] {
+.deck__chip[aria-pressed='true'] {
   background: var(--ink);
   color: var(--paper);
   box-shadow: none;

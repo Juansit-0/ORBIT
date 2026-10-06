@@ -1,5 +1,9 @@
 uniform float uTime;
 uniform float uPulse;
+uniform float uBass;
+uniform float uMid;
+uniform float uTreble;
+uniform float uBeat;
 uniform float uEnergy;
 uniform float uShock;
 uniform float uIntro;
@@ -20,6 +24,7 @@ varying float vHeat;
 varying float vFacing;
 varying float vSeed;
 varying float vRing;
+varying float vSpark;
 varying vec3 vPalette;
 
 void main() {
@@ -28,11 +33,15 @@ void main() {
   float wobble = snoise(n * 1.7 + vec3(t, t * 0.7, -t * 0.4));
   float drift = snoise(position * 0.9 + vec3(-t * 0.6, t * 0.3, t));
   float shell = 1.0 + (aSeed.y - 0.5) * mix(0.09, 0.03, aRing);
-  float breath = uEnergy * uPulse * (0.07 + 0.06 * aSeed.x) * (1.0 - aRing * 0.6);
-  float amplitude = mix(0.05 + 0.05 * uEnergy, 0.025, aRing);
+  float breath = uBass * (0.11 + 0.07 * aSeed.x) * (1.0 - aRing * 0.55);
+  float amplitude = mix(0.05 + 0.05 * uEnergy + uMid * 0.11, 0.025, aRing);
+  float waves = sin(n.y * 7.0 + n.x * 3.0 - uTime * (2.0 + uMid * 4.0)) * uMid * 0.05 * (1.0 - aRing);
+  float spark = step(0.86, aSeed.w) * uTreble * (1.0 - aRing);
+  float sparkLift = spark * (0.12 + 0.28 * (aSeed.w - 0.86) / 0.14);
+  float ringShake = aRing * uBeat * 0.06 * sin(aSeed.x * 40.0 + uTime * 30.0);
   float local = clamp(uShock * 1.7 - aSeed.x * 0.7, 0.0, 1.0);
   float shock = sin(local * 3.14159265) * 0.24 * (1.0 - uShock);
-  vec3 p = position * (shell + wobble * amplitude + breath + shock);
+  vec3 p = position * (shell + wobble * amplitude + breath + shock + waves + sparkLift + ringShake);
   p += vec3(drift) * 0.012 * aRing;
 
   float arrival = clamp((uIntro - aSeed.x * 0.35) / 0.65, 0.0, 1.0);
@@ -69,6 +78,7 @@ void main() {
   vHeat = heat;
   vSeed = aSeed.w;
   vRing = aRing;
+  vSpark = spark;
   int swatch = int(floor(fract(aSeed.z * 7.13 + aSeed.w * 3.7) * 4.999));
   vec3 picked = uPalette[0];
   if (swatch == 1) picked = uPalette[1];
@@ -79,6 +89,6 @@ void main() {
 
   vec4 mvPosition = viewMatrix * world;
   gl_Position = projectionMatrix * mvPosition;
-  float size = uSize * (0.5 + aSeed.z * 0.95) * (1.0 + heat * 1.1 + uPulse * uEnergy * 0.3);
+  float size = uSize * (0.5 + aSeed.z * 0.95) * (1.0 + heat * 1.1 + uBass * 0.35 + spark * 1.6);
   gl_PointSize = size * uPixelRatio * uScale * (8.0 / -mvPosition.z) * mix(1.0, 0.6, 1.0 - arrival);
 }

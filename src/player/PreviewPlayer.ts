@@ -5,7 +5,12 @@ export class PreviewPlayer implements PlayerAdapter {
   private readonly emitter = new PlayerEmitter()
   private readonly audio = new Audio()
 
+  get element(): HTMLAudioElement {
+    return this.audio
+  }
+
   constructor() {
+    this.audio.crossOrigin = 'anonymous'
     this.audio.preload = 'auto'
     this.audio.volume = 0.8
     this.audio.addEventListener('playing', () => this.emitter.emit({ type: 'state', state: 'playing' }))

@@ -29,6 +29,7 @@ export class NowPlaying {
   readonly volumeControl: HTMLElement
   readonly stage: HTMLElement
   readonly lyricsButton: HTMLButtonElement
+  readonly tags: HTMLElement
   private readonly scale = el('div', { class: 'seek-scale', attrs: { 'aria-hidden': 'true' } })
   private readonly liquid = new LiquidProgress()
   private seeking = false
@@ -56,7 +57,7 @@ export class NowPlaying {
     this.artist = el('p', { class: 'deck__artist', text: 'Add a song to launch the flight plan.' })
     this.source = el('p', { class: 'badge', attrs: { hidden: true } })
     this.lyricsButton = el('button', {
-      class: 'chip deck__lyrics',
+      class: 'chip deck__chip deck__lyrics',
       attrs: { type: 'button', 'aria-pressed': 'false', 'aria-controls': 'pane-lyrics' },
     }, [icon('lyrics'), el('span', { text: 'Lyrics' })])
     this.seek = el('input', {
@@ -84,7 +85,7 @@ export class NowPlaying {
         ]),
         this.title,
         this.artist,
-        el('div', { class: 'deck__tags' }, [this.source, this.lyricsButton]),
+        (this.tags = el('div', { class: 'deck__tags' }, [this.source, this.lyricsButton])),
       ]),
       el('div', { class: 'deck__controls' }, [
         el('div', { class: 'seek' }, [el('div', { class: 'seek__bar' }, [this.liquid.canvas, this.seek]), this.scale]),
