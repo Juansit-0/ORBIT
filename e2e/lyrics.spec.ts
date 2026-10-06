@@ -3,7 +3,7 @@ import { expect, test } from './fixtures.ts'
 test.describe('lyrics', () => {
   test('shows synced lyrics for the current song and follows playback', async ({ orbit }) => {
     const { page } = orbit
-    await page.getByRole('tab', { name: 'Lyrics' }).click()
+    await page.locator('.deck__lyrics').click()
     await expect(page.getByText('No song in orbit')).toBeVisible()
     await orbit.play()
     await expect(page.locator('.lyric').first()).toHaveText('Get Lucky line one')
@@ -36,14 +36,22 @@ test.describe('lyrics', () => {
     await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
   })
 
-  test('tabs are keyboard accessible', async ({ orbit }) => {
+  test('opens under the title on the stage and closes again', async ({ orbit }) => {
     const { page } = orbit
-    await page.getByRole('tab', { name: 'Search' }).focus()
-    await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('tab', { name: 'Lyrics' })).toHaveAttribute('aria-selected', 'true')
-    await expect(page.getByRole('tab', { name: 'Lyrics' })).toBeFocused()
-    await page.keyboard.press('ArrowLeft')
-    await expect(page.locator('#search-input')).toBeVisible()
+    const chip = page.locator('.deck__lyrics')
+    await expect(page.locator('#pane-lyrics')).toBeHidden()
+    await expect(chip).toHaveAttribute('aria-pressed', 'false')
+    await chip.click()
+    await expect(chip).toHaveAttribute('aria-pressed', 'true')
+    const pane = await page.locator('#pane-lyrics').boundingBox()
+    const title = await page.locator('.deck__title').boundingBox()
+    const controls = await page.locator('.deck__controls').boundingBox()
+    if (!pane || !title || !controls) throw new Error('missing boxes')
+    expect(pane.y).toBeGreaterThan(title.y)
+    expect(pane.y + pane.height).toBeLessThanOrEqual(controls.y + 1)
+    await page.keyboard.press('l')
+    await expect(page.locator('#pane-lyrics')).toBeHidden()
+    await expect(chip).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('opens lyrics from the now playing view on phones @mobile', async ({ orbit }) => {

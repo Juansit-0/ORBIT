@@ -22,7 +22,8 @@ The linked list dock in the interface draws the live structure: `null`, `HEAD`, 
 - Drag to reorder, or use the arrow buttons or `Alt` + arrow keys
 - Undo and redo for every change
 - Search the iTunes catalog and play full tracks through YouTube, with a 30 second preview fallback
-- Synced lyrics from LRCLIB, click a line to jump to it
+- Search from the top bar: results open in a panel over the stage
+- Synced lyrics from LRCLIB under the song title, click a line to jump to it
 - Several playlists, a sleep timer, system media controls and keyboard shortcuts
 - Play any search result right away without adding it, or queue it right after the current song, or drag it to any position
 - Player mode: after a while without interaction only the planet, the player and karaoke lyrics remain

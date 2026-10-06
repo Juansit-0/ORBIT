@@ -4,7 +4,7 @@ test.describe('interface details', () => {
   test('the vinyl setting is off by default, spins the cover and is remembered', async ({ orbit }) => {
     const { page } = orbit
     await expect(page.locator('html')).toHaveAttribute('data-vinyl', 'false')
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     const toggle = page.getByRole('switch', { name: /Spin the cover like a vinyl/ })
     await expect(toggle).not.toBeChecked()
     await page.locator('label[for="setting-vinyl"]').click()

@@ -40,7 +40,7 @@ test.describe('radio', () => {
 
   test('is not offered when turned off in settings', async ({ orbit }) => {
     const { page } = orbit
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     await page.locator('label[for="setting-radio"]').click()
     await page.keyboard.press('Escape')
     await orbit.row('De Música Ligera').locator('.waypoint__main').click()

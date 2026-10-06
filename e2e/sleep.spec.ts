@@ -4,7 +4,7 @@ test.describe('sleep timer', () => {
   test('stops at the end of the current song', async ({ orbit }) => {
     const { page } = orbit
     await orbit.play()
-    await page.getByRole('button', { name: 'Sleep timer' }).click()
+    await orbit.openMenu('Sleep timer')
     await page.getByRole('menuitemradio', { name: 'End of this song' }).click()
     await expect(page.locator('.sleep__badge')).toHaveText('end')
     await orbit.fakeFinish()
@@ -18,7 +18,7 @@ test.describe('sleep timer', () => {
     await page.reload()
     await expect(orbit.rows().first()).toBeAttached()
     await orbit.play()
-    await page.getByRole('button', { name: 'Sleep timer' }).click()
+    await orbit.openMenu('Sleep timer')
     await page.getByRole('menuitemradio', { name: '15 minutes' }).click()
     await expect(page.locator('.sleep__badge')).toHaveText('15m')
     await page.clock.fastForward(14 * 60000 + 54000)
@@ -32,10 +32,10 @@ test.describe('sleep timer', () => {
 
   test('can be turned off from the menu', async ({ orbit }) => {
     const { page } = orbit
-    await page.getByRole('button', { name: 'Sleep timer' }).click()
+    await orbit.openMenu('Sleep timer')
     await page.getByRole('menuitemradio', { name: '30 minutes' }).click()
-    await expect(page.getByRole('button', { name: /Sleep timer, 30m left/ })).toBeVisible()
-    await page.getByRole('button', { name: /Sleep timer/ }).click()
+    await expect(page.locator('.more__badge')).toHaveText('30m')
+    await orbit.openMenu(/Sleep timer, 30m left/)
     await expect(page.getByRole('menuitemradio', { name: '30 minutes' })).toHaveAttribute('aria-checked', 'true')
     await page.getByRole('menuitemradio', { name: 'Off' }).click()
     await expect(page.locator('.sleep__badge')).toBeHidden()

@@ -8,13 +8,13 @@ test.describe('explain mode', () => {
     await expect(page.locator('.dock__explain')).toBeHidden()
     await expect(page.locator('.dock')).not.toHaveAttribute('data-explaining', 'true')
     await expect(page.locator('.link__path--explained')).toHaveCount(0)
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     await expect(page.getByRole('switch', { name: /Explain list operations/ })).not.toBeChecked()
   })
 
   test('plays the pointer changes of an insert step by step', async ({ orbit }) => {
     const { page } = orbit
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     await page.locator('label[for="setting-explain"]').click()
     await page.keyboard.press('Escape')
     await orbit.search('radiohead')
@@ -31,7 +31,7 @@ test.describe('explain mode', () => {
 
   test('explains removing the head and is remembered', async ({ orbit }) => {
     const { page } = orbit
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     await page.locator('label[for="setting-explain"]').click()
     await page.keyboard.press('Escape')
     await page.reload()

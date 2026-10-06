@@ -75,6 +75,10 @@ export class SleepMenu {
     this.render(timer)
   }
 
+  get badgeText(): string | null {
+    return this.badge.hidden ? null : this.badge.textContent
+  }
+
   private render(timer: SleepTimer): void {
     const mode = timer.mode
     for (const entry of this.items) entry.button.setAttribute('aria-checked', String(sameMode(entry.mode, mode)))

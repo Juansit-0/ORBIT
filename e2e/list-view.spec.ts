@@ -6,14 +6,14 @@ test.describe('linked list panel', () => {
   test('is hidden by default and the player gets the space', async ({ orbit }) => {
     const { page } = orbit
     await expect(page.locator('.dock')).toBeHidden()
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     await expect(page.getByRole('switch', { name: /Show linked list/ })).not.toBeChecked()
     await expect(page.getByRole('switch', { name: /Explain list operations/ })).toBeHidden()
   })
 
   test('shows from settings together with the explain option, and is remembered', async ({ orbit }) => {
     const { page } = orbit
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     await page.locator('label[for="setting-list"]').click()
     await expect(page.locator('.dock')).toBeVisible()
     await expect(page.getByRole('switch', { name: /Explain list operations/ })).toBeVisible()

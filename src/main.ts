@@ -33,9 +33,9 @@ import { Monitor } from './ui/Monitor.ts'
 import { NodeVisualizer } from './ui/NodeVisualizer.ts'
 import { NowPlaying } from './ui/NowPlaying.ts'
 import { QueuePanel } from './ui/QueuePanel.ts'
-import { LeftRail } from './ui/LeftRail.ts'
 import { LibraryMenu } from './ui/LibraryMenu.ts'
 import { LyricsPanel } from './ui/LyricsPanel.ts'
+import { MoreMenu } from './ui/MoreMenu.ts'
 import { SearchPanel } from './ui/SearchPanel.ts'
 import { mountOrbitCursor } from './ui/OrbitCursor.ts'
 import { CinemaMode } from './ui/CinemaMode.ts'
@@ -83,8 +83,8 @@ if (root) {
   const masthead = new Masthead(app)
   const search = new SearchPanel(app)
   const lyrics = new LyricsPanel(app)
-  const rail = new LeftRail(search.root, lyrics.root)
   const now = new NowPlaying(app)
+  now.mountLyrics(lyrics.root)
   lyrics.onActiveLine((text) => now.setKaraoke(text))
   const liveChip = createLiveSoundChip(reactor)
   if (liveChip) now.tags.append(liveChip)
@@ -102,15 +102,12 @@ if (root) {
   const tabs = new MobileTabs(shell)
   const help = createShortcutHelp()
   const toggleLyrics = () => {
-    if (rail.tab === 'lyrics' && rail.root.offsetParent !== null) {
-      rail.show('search')
-      return
-    }
-    tabs.show('search')
-    rail.show('lyrics')
+    const shown = !(lyrics.shown && now.root.offsetParent !== null)
+    tabs.show('now')
+    lyrics.setShown(shown)
+    now.lyricsButton.setAttribute('aria-pressed', String(shown))
   }
   now.lyricsButton.addEventListener('click', toggleLyrics)
-  rail.onChange((tab) => now.lyricsButton.setAttribute('aria-pressed', String(tab === 'lyrics')))
   const sleep = new SleepTimer({
     now: () => Date.now(),
     setInterval: (callback, ms) => window.setInterval(callback, ms),
@@ -179,9 +176,16 @@ if (root) {
   }, [icon('cinema')])
   cinemaButton.addEventListener('click', () => cinema.enter(true))
   cinema.onChange(() => now.resetHover())
-  masthead.actions.append(cinemaButton, now.volumeControl, sleepMenu.button, settings.button, help.button)
+  const more = new MoreMenu([
+    { button: sleepMenu.button, label: 'Sleep timer', panel: sleepMenu.panel },
+    { button: settings.button, label: 'Settings', panel: settings.panel },
+    { button: help.button, label: 'Keyboard shortcuts', panel: help.panel },
+  ])
+  sleep.subscribe(() => more.setBadge(sleepMenu.badgeText))
+  more.setBadge(sleepMenu.badgeText)
+  masthead.actions.append(cinemaButton, now.volumeControl, more.button)
 
-  shell.append(masthead.root, rail.root, now.root, visualizer.root, queue.root, monitor.root, tabs.root)
+  shell.append(masthead.root, search.root, now.root, visualizer.root, queue.root, monitor.root, tabs.root)
   const compact = window.matchMedia('(max-width: 920px)')
   const placeMonitor = () => monitor.place(compact.matches ? now.lensRect() : null)
   playback.subscribe((state) => {
@@ -204,13 +208,12 @@ if (root) {
     setSleep: (minutes) => sleep.set(minutes === null ? { kind: 'off' } : minutes === 'end' ? { kind: 'end-of-song' } : { kind: 'minutes', minutes }),
     focusSearch: () => {
       tabs.show('search')
-      rail.show('search')
       search.focus()
     },
     toggleList: () => toggleList(),
     listShown: () => listShown,
   })
-  root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
+  root.append(shell, more.panel, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
   mountOrbitCursor()
   mountToasts(document.body)
   const sharedParam = new URLSearchParams(location.search).get('plan')
@@ -237,7 +240,6 @@ if (root) {
     {
       focusSearch: () => {
         tabs.show('search')
-        rail.show('search')
         search.focus()
       },
       toggleLyrics,
