@@ -45,6 +45,8 @@ export class PlaybackController {
   private stopAfter = false
   private readonly attempts = new Map<string, { ids: string[]; index: number }>()
   private readonly endListeners = new Set<() => void>()
+  private readonly planEndListeners = new Set<(last: Song | null) => void>()
+  private readonly looseEndListeners = new Set<(song: Song) => void>()
   private snapshot: PlaybackState = {
     status: 'idle',
     nodeId: null,
@@ -173,6 +175,16 @@ export class PlaybackController {
   onTrackEnd(listener: () => void): () => void {
     this.endListeners.add(listener)
     return () => this.endListeners.delete(listener)
+  }
+
+  onPlanEnd(listener: (last: Song | null) => void): () => void {
+    this.planEndListeners.add(listener)
+    return () => this.planEndListeners.delete(listener)
+  }
+
+  onLooseEnd(listener: (song: Song) => void): () => void {
+    this.looseEndListeners.add(listener)
+    return () => this.looseEndListeners.delete(listener)
   }
 
   pause(): void {
@@ -404,6 +416,7 @@ export class PlaybackController {
       }
       this.active?.seek(0)
       this.update({ status: 'paused', currentMs: 0 })
+      for (const listener of this.looseEndListeners) listener(loose.value)
       return
     }
     const current = this.playlist.current
@@ -411,6 +424,7 @@ export class PlaybackController {
     if (!node) {
       this.loadedNodeId = null
       this.update({ status: 'idle', nodeId: current?.id ?? null, currentMs: 0 })
+      for (const listener of this.planEndListeners) listener(current?.value ?? null)
       return
     }
     if (node === current && this.active && this.loadedNodeId === node.id) {

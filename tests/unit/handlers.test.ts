@@ -23,8 +23,10 @@ describe('mapItunesTrack', () => {
         artworkUrl100: 'https://a.mzstatic.com/x/100x100bb.jpg',
         trackTimeMillis: 200000,
         previewUrl: 'https://p.m4a',
+        primaryGenreName: 'Pop',
       }),
     ).toEqual({
+      genre: 'Pop',
       id: '1',
       title: 'Song',
       artist: 'Artist',

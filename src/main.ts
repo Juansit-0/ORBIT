@@ -5,6 +5,7 @@ import './styles/components.css'
 import './styles/dock.css'
 import './styles/cinema.css'
 import { PlayerApp } from './app/PlayerApp.ts'
+import { Radio } from './app/Radio.ts'
 import { AudioReactor } from './audio/AudioReactor.ts'
 import { Playlist } from './core/Playlist.ts'
 import { PlaylistLibrary } from './core/PlaylistLibrary.ts'
@@ -109,6 +110,15 @@ if (root) {
   playback.onTrackEnd(() => sleep.songEnded())
   const sleepMenu = new SleepMenu(sleep)
   bindMediaSession(app)
+  let radioEnabled = prefs.radio
+  const radio = new Radio(app, () => radioEnabled)
+  const radioChip = el('button', {
+    class: 'chip deck__chip radio-chip',
+    attrs: { type: 'button', hidden: true, 'aria-pressed': 'true', 'aria-label': 'Radio on. Stop radio', title: 'Stop radio' },
+  }, [icon('wave'), el('span', { text: 'Radio' }), icon('close', 'icon radio-chip__stop')])
+  radioChip.addEventListener('click', () => radio.stop())
+  radio.onChange(() => (radioChip.hidden = !radio.active))
+  now.tags.prepend(radioChip)
   let cinemaDelay = prefs.cinemaDelay
   let cinemaFullscreen = prefs.cinemaFullscreen
   const cinema = new CinemaMode(app, { delayMs: () => cinemaDelay, fullscreen: () => cinemaFullscreen })
@@ -127,6 +137,12 @@ if (root) {
     onCinemaFullscreen: (enabled) => {
       cinemaFullscreen = enabled
       savePrefs({ cinemaFullscreen: enabled })
+    },
+    radio: radioEnabled,
+    onRadio: (enabled) => {
+      radioEnabled = enabled
+      savePrefs({ radio: enabled })
+      if (!enabled) radio.stop(false)
     },
     explain: prefs.explain,
     onExplain: (enabled) => {
