@@ -17,22 +17,30 @@ import {
 import noise from './noise.glsl?raw'
 import fragmentShader from './particles.frag?raw'
 import vertexSource from './particles.vert?raw'
+import { buildTargets, sampleCover } from './coverMorph.ts'
+import { blend } from './palette.ts'
 import { profileFor, pulseAt, type PulseProfile } from './pulse.ts'
 
 const TRAIL_LENGTH = 12
 const FOV = 35
 const CAMERA_DISTANCE = 6
+const MORPH_RISE = 0.9
+const MORPH_HOLD = 1.0
+const MORPH_FALL = 1.2
+const INTERACTIVE = 'button, input, a, label, [role="tab"], [popover], .rail, .dock, .mast, .tabs, .toast, .lens, .deck__meta, .deck__controls'
 
 export interface SceneOptions {
   canvas: HTMLCanvasElement
   anchor: HTMLElement
   particleCount: number
+  intro: boolean
 }
 
 export interface PlaybackInput {
   playing: boolean
   trackKey: string | null
   positionMs: number
+  artworkUrl: string | null
 }
 
 function fibonacciSphere(count: number): Float32Array {
@@ -90,11 +98,21 @@ export class OrbitScene {
   private energy = 0.15
   private shock = 1
   private profile: PulseProfile = profileFor('orbit')
-  private input: PlaybackInput = { playing: false, trackKey: null, positionMs: 0 }
+  private input: PlaybackInput = { playing: false, trackKey: null, positionMs: 0, artworkUrl: null }
+  private readonly sphereCount: number
+  private morphStart = -1
+  private intro = 1
+  private click = new Vector4(0, 0, 0, 1)
+  private readonly baseChart: Color
+  private readonly baseKey: Color
+  private readonly targetChart: Color
+  private readonly targetKey: Color
+  private coverRequest = 0
   private inputStamp = performance.now()
   private readonly onPointer: (event: PointerEvent) => void
   private readonly onLeave: () => void
   private readonly onVisibility: () => void
+  private readonly onPointerDown: (event: PointerEvent) => void
 
   constructor(options: SceneOptions) {
     this.anchor = options.anchor
@@ -104,6 +122,8 @@ export class OrbitScene {
     this.camera.position.set(0, 0, CAMERA_DISTANCE)
 
     const sphereCount = options.particleCount
+    this.sphereCount = sphereCount
+    this.intro = options.intro ? 0 : 1
     const ringCount = Math.round(options.particleCount * 0.2)
     const total = sphereCount + ringCount
     const positions = new Float32Array(total * 3)
@@ -117,9 +137,15 @@ export class OrbitScene {
     geometry.setAttribute('position', new BufferAttribute(positions, 3))
     geometry.setAttribute('aSeed', new BufferAttribute(seeds, 4))
     geometry.setAttribute('aRing', new BufferAttribute(ring, 1))
+    geometry.setAttribute('aTarget', new BufferAttribute(new Float32Array(total * 2), 2))
+    geometry.setAttribute('aTargetColor', new BufferAttribute(new Float32Array(total * 3), 3))
 
     const css = getComputedStyle(document.documentElement)
     const token = (name: string, fallback: string) => new Color(css.getPropertyValue(name).trim() || fallback)
+    this.baseChart = token('--chart-soft', '#5ba8e0')
+    this.baseKey = new Color('#ffb27a')
+    this.targetChart = this.baseChart.clone()
+    this.targetKey = this.baseKey.clone()
     this.material = new ShaderMaterial({
       vertexShader: `#define TRAIL_LENGTH ${TRAIL_LENGTH}\n${noise}\n${vertexSource}`,
       fragmentShader,
@@ -131,15 +157,18 @@ export class OrbitScene {
         uPulse: { value: 0 },
         uEnergy: { value: this.energy },
         uShock: { value: 1 },
+        uIntro: { value: this.intro },
+        uMorph: { value: 0 },
+        uClick: { value: this.click },
         uPixelRatio: { value: this.renderer.getPixelRatio() },
         uSize: { value: 4.4 },
         uScale: { value: 1 },
         uTrail: { value: this.trail },
         uKeyDir: { value: new Vector3(-0.65, 0.7, 0.55).normalize() },
         uInk: { value: token('--ink', '#10324a') },
-        uChart: { value: token('--chart-soft', '#5ba8e0') },
+        uChart: { value: this.baseChart.clone() },
         uBurn: { value: token('--burn', '#ff7a1a') },
-        uKey: { value: new Color('#ffb27a') },
+        uKey: { value: this.baseKey.clone() },
       },
     })
     this.points = new Points(geometry, this.material)
@@ -151,6 +180,13 @@ export class OrbitScene {
     }
     this.onLeave = () => this.pointer.set(10, 10)
     this.onVisibility = () => (document.hidden ? this.stop() : this.play())
+    this.onPointerDown = (event) => {
+      if (event.button !== 0 || (event.target instanceof Element && event.target.closest(INTERACTIVE))) return
+      this.onPointer(event)
+      const hit = this.hitTest(1.15)
+      if (hit) this.click.set(hit.x, hit.y, hit.z, 0)
+    }
+    window.addEventListener('pointerdown', this.onPointerDown)
     window.addEventListener('pointermove', this.onPointer, { passive: true })
     document.documentElement.addEventListener('pointerleave', this.onLeave)
     document.addEventListener('visibilitychange', this.onVisibility)
@@ -159,17 +195,74 @@ export class OrbitScene {
   }
 
   setPlayback(input: PlaybackInput): void {
-    if (input.trackKey !== this.input.trackKey) {
-      this.profile = profileFor(input.trackKey ?? 'orbit')
-      if (this.input.trackKey !== null && input.trackKey !== null) this.shock = 0
-    }
+    const changed = input.trackKey !== this.input.trackKey
+    const transition = changed && this.input.trackKey !== null && input.trackKey !== null
+    if (changed) this.profile = profileFor(input.trackKey ?? 'orbit')
+    const coverChanged = input.artworkUrl !== this.input.artworkUrl
     this.input = input
     this.inputStamp = performance.now()
+    if (coverChanged || changed) void this.loadCover(input.artworkUrl, transition)
+  }
+
+  private async loadCover(url: string | null, transition: boolean): Promise<void> {
+    const request = ++this.coverRequest
+    if (!url) {
+      this.targetChart.copy(this.baseChart)
+      this.targetKey.copy(this.baseKey)
+      if (transition) this.shock = 0
+      return
+    }
+    const requested = performance.now()
+    try {
+      const sample = await sampleCover(url)
+      if (request !== this.coverRequest) return
+      const vivid = sample.palette.vivid
+      const chart = blend([this.baseChart.r, this.baseChart.g, this.baseChart.b], vivid, 0.55, 0.62)
+      const key = blend([this.baseKey.r, this.baseKey.g, this.baseKey.b], vivid, 0.4, 0.85)
+      this.targetChart.setRGB(...chart)
+      this.targetKey.setRGB(...key)
+      if (!transition) return
+      if (performance.now() - requested > 1800) {
+        this.shock = 0
+        return
+      }
+      const targets = buildTargets(this.sphereCount, sample)
+      const geometry = this.points.geometry
+      const position = geometry.getAttribute('aTarget') as BufferAttribute
+      const color = geometry.getAttribute('aTargetColor') as BufferAttribute
+      ;(position.array as Float32Array).set(targets.positions)
+      ;(color.array as Float32Array).set(targets.colors)
+      position.needsUpdate = true
+      color.needsUpdate = true
+      this.morphStart = performance.now()
+    } catch {
+      if (request === this.coverRequest && transition) this.shock = 0
+    }
+  }
+
+  private morphValue(now: number): number {
+    if (this.morphStart < 0) return 0
+    const t = (now - this.morphStart) / 1000
+    if (t < MORPH_RISE) return t / MORPH_RISE
+    if (t < MORPH_RISE + MORPH_HOLD) return 1
+    if (t < MORPH_RISE + MORPH_HOLD + MORPH_FALL) return 1 - (t - MORPH_RISE - MORPH_HOLD) / MORPH_FALL
+    this.morphStart = -1
+    return 0
+  }
+
+  private hitTest(reach: number): Vector3 | null {
+    this.ray.origin.copy(this.camera.position)
+    this.ray.direction.set(this.pointer.x, this.pointer.y, 0.5).unproject(this.camera).sub(this.camera.position).normalize()
+    const radius = this.points.scale.x
+    this.sphere.set(this.points.position, radius * reach)
+    const hit = new Vector3()
+    return this.ray.intersectSphere(this.sphere, hit) ? hit : null
   }
 
   dispose(): void {
     this.stop()
     window.removeEventListener('pointermove', this.onPointer)
+    window.removeEventListener('pointerdown', this.onPointerDown)
     document.documentElement.removeEventListener('pointerleave', this.onLeave)
     document.removeEventListener('visibilitychange', this.onVisibility)
     this.points.geometry.dispose()
@@ -253,6 +346,11 @@ export class OrbitScene {
     const position = this.input.positionMs + (playing ? now - this.inputStamp : 0)
     const beat = playing ? pulseAt(position, this.profile) : 0.5 + 0.5 * Math.sin(elapsed * 1.3)
     this.shock = Math.min(1, this.shock + delta / 1.3)
+    this.intro = Math.min(1, this.intro + delta / 1.9)
+    this.click.w = Math.min(1, this.click.w + delta / 1.4)
+    const tint = Math.min(1, delta * 1.5)
+    ;(this.material.uniforms.uChart!.value as Color).lerp(this.targetChart, tint)
+    ;(this.material.uniforms.uKey!.value as Color).lerp(this.targetKey, tint)
     this.updateTrail()
     this.parallax.x += (Math.max(-1, Math.min(1, this.pointer.x)) * 0.12 - this.parallax.x) * Math.min(1, delta * 2)
     this.parallax.y += (Math.max(-1, Math.min(1, this.pointer.y)) * 0.08 - this.parallax.y) * Math.min(1, delta * 2)
@@ -266,6 +364,8 @@ export class OrbitScene {
     uniforms.uPulse!.value = beat
     uniforms.uEnergy!.value = this.energy
     uniforms.uShock!.value = this.shock
+    uniforms.uIntro!.value = this.intro
+    uniforms.uMorph!.value = this.morphValue(now)
     this.renderer.render(this.scene, this.camera)
   }
 }

@@ -10,6 +10,16 @@ function webglAvailable(): boolean {
   }
 }
 
+function firstVisit(): boolean {
+  try {
+    const first = localStorage.getItem('orbit:v1:intro') !== 'seen'
+    localStorage.setItem('orbit:v1:intro', 'seen')
+    return first
+  } catch {
+    return false
+  }
+}
+
 export function mountScene(anchor: HTMLElement, playlist: Playlist, playback: PlaybackController): void {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
   if (reduced.matches || !webglAvailable() || import.meta.env.VITE_PLAYER === 'fake') return
@@ -20,11 +30,13 @@ export function mountScene(anchor: HTMLElement, playlist: Playlist, playback: Pl
       canvas.setAttribute('aria-hidden', 'true')
       document.body.prepend(canvas)
       const small = window.matchMedia('(max-width: 920px)').matches
+      const intro = firstVisit()
       const cores = navigator.hardwareConcurrency || 4
       const scene = new OrbitScene({
         canvas,
         anchor,
         particleCount: small ? (cores <= 4 ? 3500 : 6000) : cores <= 4 ? 9000 : 15000,
+        intro,
       })
       const sync = () => {
         const state = playback.state
@@ -33,6 +45,7 @@ export function mountScene(anchor: HTMLElement, playlist: Playlist, playback: Pl
           playing: state.status === 'playing',
           trackKey: node?.value.id ?? null,
           positionMs: state.currentMs,
+          artworkUrl: node?.value.artworkUrl ?? null,
         })
       }
       playback.subscribe(sync)
