@@ -61,6 +61,25 @@ export const test = base.extend<{ mocks: ApiMocks; orbit: OrbitPage }>({
       }
       return route.fulfill({ json: { videoId: `vid-${title.replace(/\W+/g, '-')}` } })
     })
+    await page.route('**/api/lyrics**', async (route) => {
+      const title = new URL(route.request().url()).searchParams.get('title') ?? ''
+      if (title === 'Dreams') return route.fulfill({ status: 404, json: { error: 'not_found' } })
+      if (title === 'Levitating') return route.fulfill({ json: { synced: [], plain: 'If you wanna run away with me\nI know a galaxy', instrumental: false } })
+      if (title === 'Viva La Vida') return route.fulfill({ status: 502, json: { error: 'upstream_error' } })
+      return route.fulfill({
+        json: {
+          synced: [
+            { timeMs: 0, text: `${title} line one` },
+            { timeMs: 4000, text: `${title} line two` },
+            { timeMs: 8000, text: '' },
+            { timeMs: 12000, text: `${title} line four` },
+            { timeMs: 30000, text: `${title} line five` },
+          ],
+          plain: null,
+          instrumental: false,
+        },
+      })
+    })
     await page.goto('/')
     await expect(page.locator('.waypoint').first()).toBeAttached()
     await use(new OrbitPage(page))

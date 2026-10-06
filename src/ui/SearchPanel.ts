@@ -42,11 +42,7 @@ export class SearchPanel {
       this.clear,
     ])
     this.body = el('div', { class: 'rail__body', attrs: { 'aria-live': 'polite' } })
-    this.root = el('aside', { class: 'rail rail--search', attrs: { id: 'panel-search', 'aria-labelledby': 'search-heading' } }, [
-      el('header', { class: 'rail__head' }, [el('h2', { class: 'rail__title', text: 'Search', attrs: { id: 'search-heading' } })]),
-      form,
-      this.body,
-    ])
+    this.root = el('div', { class: 'rail-pane' }, [form, this.body])
     form.addEventListener('submit', (event) => {
       event.preventDefault()
       this.run(this.input.value, true)

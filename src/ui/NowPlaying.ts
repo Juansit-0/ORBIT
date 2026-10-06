@@ -27,6 +27,7 @@ export class NowPlaying {
   private readonly emptyText = el('span', { text: 'Nothing in orbit yet' })
   readonly volumeControl: HTMLElement
   readonly stage: HTMLElement
+  readonly lyricsButton: HTMLButtonElement
   private readonly scale = el('div', { class: 'seek-scale', attrs: { 'aria-hidden': 'true' } })
   private seeking = false
   private lastVolume = 80
@@ -47,6 +48,10 @@ export class NowPlaying {
     this.title = el('h1', { class: 'deck__title', text: 'Orbit' })
     this.artist = el('p', { class: 'deck__artist', text: 'Add a song to launch the flight plan.' })
     this.source = el('p', { class: 'badge', attrs: { hidden: true } })
+    this.lyricsButton = el('button', {
+      class: 'chip deck__lyrics',
+      attrs: { type: 'button', 'aria-pressed': 'false', 'aria-controls': 'pane-lyrics' },
+    }, [icon('lyrics'), el('span', { text: 'Lyrics' })])
     this.seek = el('input', {
       class: 'range range--seek',
       attrs: { type: 'range', min: 0, max: 1000, step: 1000, value: 0, 'aria-label': 'Seek', disabled: true },
@@ -72,7 +77,7 @@ export class NowPlaying {
         ]),
         this.title,
         this.artist,
-        this.source,
+        el('div', { class: 'deck__tags' }, [this.source, this.lyricsButton]),
       ]),
       el('div', { class: 'deck__controls' }, [
         el('div', { class: 'seek' }, [this.seek, this.scale]),

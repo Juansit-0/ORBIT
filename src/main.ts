@@ -21,6 +21,8 @@ import { MobileTabs } from './ui/MobileTabs.ts'
 import { NodeVisualizer } from './ui/NodeVisualizer.ts'
 import { NowPlaying } from './ui/NowPlaying.ts'
 import { QueuePanel } from './ui/QueuePanel.ts'
+import { LeftRail } from './ui/LeftRail.ts'
+import { LyricsPanel } from './ui/LyricsPanel.ts'
 import { SearchPanel } from './ui/SearchPanel.ts'
 import { bindShortcuts, createShortcutHelp } from './ui/shortcuts.ts'
 
@@ -51,14 +53,26 @@ if (root) {
   const shell = el('div', { class: 'app' })
   const masthead = new Masthead(app)
   const search = new SearchPanel(app)
+  const lyrics = new LyricsPanel(app)
+  const rail = new LeftRail(search.root, lyrics.root)
   const now = new NowPlaying(app, videoHost)
   const queue = new QueuePanel(app)
   const visualizer = new NodeVisualizer(app)
   const tabs = new MobileTabs(shell)
   const help = createShortcutHelp()
+  const toggleLyrics = () => {
+    if (rail.tab === 'lyrics' && rail.root.offsetParent !== null) {
+      rail.show('search')
+      return
+    }
+    tabs.show('search')
+    rail.show('lyrics')
+  }
+  now.lyricsButton.addEventListener('click', toggleLyrics)
+  rail.onChange((tab) => now.lyricsButton.setAttribute('aria-pressed', String(tab === 'lyrics')))
   masthead.actions.append(now.volumeControl, help.button)
 
-  shell.append(masthead.root, search.root, now.root, visualizer.root, queue.root, tabs.root)
+  shell.append(masthead.root, rail.root, now.root, visualizer.root, queue.root, tabs.root)
   root.append(shell, help.panel)
   mountToasts(document.body)
   mountScene(now.stage, playlist, playback)
@@ -67,8 +81,10 @@ if (root) {
     {
       focusSearch: () => {
         tabs.show('search')
+        rail.show('search')
         search.focus()
       },
+      toggleLyrics,
       focusFilter: () => {
         tabs.show('queue')
         queue.focusFilter()
