@@ -9,7 +9,9 @@ import { demoPlaylist } from './data/demoPlaylist.ts'
 import { FakePlayer } from './player/FakePlayer.ts'
 import { PlaybackController } from './player/PlaybackController.ts'
 import type { PlayerAdapter } from './player/PlayerAdapter.ts'
+import { bindMediaSession } from './player/mediaSession.ts'
 import { PreviewPlayer } from './player/PreviewPlayer.ts'
+import { SleepTimer } from './player/SleepTimer.ts'
 import { YouTubePlayer } from './player/YouTubePlayer.ts'
 import { resolveVideoId } from './services/resolveService.ts'
 import { mountScene } from './scene/mountScene.ts'
@@ -24,6 +26,7 @@ import { QueuePanel } from './ui/QueuePanel.ts'
 import { LeftRail } from './ui/LeftRail.ts'
 import { LyricsPanel } from './ui/LyricsPanel.ts'
 import { SearchPanel } from './ui/SearchPanel.ts'
+import { SleepMenu } from './ui/SleepMenu.ts'
 import { bindShortcuts, createShortcutHelp } from './ui/shortcuts.ts'
 
 const root = document.querySelector<HTMLDivElement>('#app')
@@ -70,10 +73,22 @@ if (root) {
   }
   now.lyricsButton.addEventListener('click', toggleLyrics)
   rail.onChange((tab) => now.lyricsButton.setAttribute('aria-pressed', String(tab === 'lyrics')))
-  masthead.actions.append(now.volumeControl, help.button)
+  const sleep = new SleepTimer({
+    now: () => Date.now(),
+    setInterval: (callback, ms) => window.setInterval(callback, ms),
+    clearInterval: (id) => window.clearInterval(id),
+    getVolume: () => playback.state.volume,
+    setVolume: (volume) => playback.setVolume(volume),
+    pause: () => playback.pause(),
+    stopAfterCurrent: (enabled) => playback.setStopAfterCurrent(enabled),
+  })
+  playback.onTrackEnd(() => sleep.songEnded())
+  const sleepMenu = new SleepMenu(sleep)
+  bindMediaSession(app)
+  masthead.actions.append(now.volumeControl, sleepMenu.button, help.button)
 
   shell.append(masthead.root, rail.root, now.root, visualizer.root, queue.root, tabs.root)
-  root.append(shell, help.panel)
+  root.append(shell, help.panel, sleepMenu.panel)
   mountToasts(document.body)
   mountScene(now.stage, playlist, playback)
   bindShortcuts(
