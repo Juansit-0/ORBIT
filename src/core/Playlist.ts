@@ -121,6 +121,18 @@ export class Playlist {
     return this.predecessorOf(this.current) !== null || this.repeat === 'all'
   }
 
+  peekNext(): SongNode | null {
+    if (this.isEmpty()) return null
+    if (!this.current) return this.firstNode()
+    return this.successorOf(this.current) ?? (this.repeat === 'all' ? this.firstNode() : null)
+  }
+
+  peekPrevious(): SongNode | null {
+    if (this.isEmpty()) return null
+    if (!this.current) return this.lastNode()
+    return this.predecessorOf(this.current) ?? (this.repeat === 'all' ? this.lastNode() : null)
+  }
+
   next(): SongNode | null {
     if (this.isEmpty()) return null
     const target = this.current

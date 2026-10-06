@@ -235,6 +235,28 @@ describe('Playlist', () => {
     })
   })
 
+  describe('peeking', () => {
+    it('shows the next and previous nodes without moving', () => {
+      playlist = playlistOf('a', 'b', 'c')
+      expect(playlist.peekNext()?.value.id).toBe('a')
+      playlist.select(playlist.list.getNode(1)!.id)
+      expect(playlist.peekNext()?.value.id).toBe('c')
+      expect(playlist.peekPrevious()?.value.id).toBe('a')
+      expect(playlist.current?.value.id).toBe('b')
+    })
+
+    it('respects the ends, repeat all and shuffle', () => {
+      playlist = playlistOf('a', 'b', 'c')
+      playlist.select(playlist.list.tail!.id)
+      expect(playlist.peekNext()).toBeNull()
+      playlist.setRepeat('all')
+      expect(playlist.peekNext()?.value.id).toBe('a')
+      playlist.setShuffle(true)
+      expect(playlist.peekNext()).toBe(playlist.playOrder()[1])
+      expect(playlistOf().peekNext()).toBeNull()
+    })
+  })
+
   describe('persistence', () => {
     it('restores songs, current song and modes', () => {
       playlist = playlistOf('a', 'b', 'c')

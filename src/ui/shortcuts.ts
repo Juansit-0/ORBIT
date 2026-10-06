@@ -7,9 +7,11 @@ export interface ShortcutTargets {
   focusFilter: () => void
   toggleLyrics: () => void
   toggleCinema: () => void
+  togglePalette: () => void
 }
 
 export const SHORTCUTS: { keys: string[]; action: string }[] = [
+  { keys: ['Ctrl', 'K'], action: 'Command palette' },
   { keys: ['Space'], action: 'Play or pause' },
   { keys: ['→'], action: 'Next song' },
   { keys: ['←'], action: 'Previous song' },
@@ -61,6 +63,11 @@ export function bindShortcuts(app: PlayerApp, targets: ShortcutTargets, help: HT
     if (event.defaultPrevented) return
     if (event.metaKey || event.ctrlKey) {
       const key = event.key.toLowerCase()
+      if (key === 'k') {
+        event.preventDefault()
+        targets.togglePalette()
+        return
+      }
       if ((key === 'z' || key === 'y') && !isTyping(event.target)) {
         event.preventDefault()
         void (key === 'y' || event.shiftKey ? app.redo() : app.undo())
