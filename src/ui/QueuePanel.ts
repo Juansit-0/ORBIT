@@ -12,6 +12,7 @@ interface RowRefs {
   cover: HTMLImageElement
   title: HTMLElement
   artist: HTMLElement
+  inlineTime: HTMLElement
   time: HTMLElement
   status: HTMLElement
   main: HTMLButtonElement
@@ -135,6 +136,7 @@ export class QueuePanel {
       cover: el('img', { class: 'waypoint__cover', attrs: { alt: '', width: 40, height: 40, loading: 'lazy', decoding: 'async' } }),
       title: el('span', { class: 'waypoint__title' }),
       artist: el('span', { class: 'waypoint__artist' }),
+      inlineTime: el('span', { class: 'waypoint__inline-time' }),
       time: el('span', { class: 'waypoint__time' }),
       status: el('span', { class: 'waypoint__status' }),
       main: el('button', { class: 'waypoint__main', attrs: { type: 'button' } }),
@@ -142,7 +144,14 @@ export class QueuePanel {
       down: el('button', { class: 'icon-button icon-button--small', attrs: { type: 'button' } }, [icon('down')]),
       remove: el('button', { class: 'icon-button icon-button--small icon-button--danger waypoint__remove', attrs: { type: 'button' } }, [icon('trash')]),
     }
-    refs.main.append(refs.cover, el('span', { class: 'waypoint__text' }, [refs.title, refs.artist, refs.status]))
+    refs.main.append(
+      refs.cover,
+      el('span', { class: 'waypoint__text' }, [
+        refs.title,
+        el('span', { class: 'waypoint__sub' }, [refs.artist, refs.inlineTime]),
+        refs.status,
+      ]),
+    )
     refs.row.append(
       el('span', { class: 'waypoint__pos', attrs: { 'aria-hidden': 'true', title: 'Drag to reorder' } }, [
         refs.position,
@@ -184,6 +193,7 @@ export class QueuePanel {
     setText(refs.title, song.title)
     setText(refs.artist, song.artist)
     setText(refs.time, formatTime(song.durationMs))
+    setText(refs.inlineTime, formatTime(song.durationMs))
     setText(refs.status, song.unavailable ? 'Unavailable' : '')
     refs.status.hidden = !song.unavailable
     refs.row.dataset.unavailable = String(Boolean(song.unavailable))

@@ -6,8 +6,8 @@ import { drawLinks, FlipTracker, popIn } from './motion.ts'
 import type { PlaylistChange } from '../core/Playlist.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
-const MIN_GROW = 1
-const MAX_GROW = 4
+const MIN_GROW = 0.5
+const MAX_GROW = 10
 
 interface NodeRefs {
   item: HTMLLIElement
@@ -38,6 +38,7 @@ export class NodeVisualizer {
   private readonly track: HTMLOListElement
   private readonly size: HTMLElement
   private readonly pointers: HTMLElement
+  private readonly now: HTMLElement
   private readonly refs = new Map<string, NodeRefs>()
   private lastCurrent: string | null = null
   private readonly flip = new FlipTracker('nodeId')
@@ -46,6 +47,7 @@ export class NodeVisualizer {
     this.app = app
     this.size = el('span', { class: 'dock__size' })
     this.pointers = el('p', { class: 'dock__pointers' })
+    this.now = el('p', { class: 'dock__now' })
     this.track = el('ol', { class: 'chain', attrs: { 'aria-label': 'Doubly linked list nodes from head to tail' } })
     this.root = el('section', { class: 'dock', attrs: { 'aria-labelledby': 'dock-heading' } }, [
       el('header', { class: 'dock__head' }, [
@@ -57,6 +59,7 @@ export class NodeVisualizer {
         ]),
       ]),
       el('div', { class: 'dock__viewport' }, [this.track]),
+      this.now,
     ])
     app.playlist.subscribe((change) => this.render(change))
     app.playback.subscribe(() => this.renderCurrent())
@@ -140,6 +143,12 @@ export class NodeVisualizer {
   private renderCurrent(): void {
     const current = this.app.playlist.current?.id ?? null
     const playing = this.app.playback.isPlaying
+    const currentNode = this.app.playlist.current
+    const position = currentNode ? this.app.playlist.list.indexOf(currentNode) + 1 : 0
+    setText(
+      this.now,
+      currentNode ? `current = #${position} ${currentNode.value.title} \u00b7 ${formatTime(currentNode.value.durationMs)}` : 'current = null',
+    )
     for (const [id, refs] of this.refs) {
       const active = id === current
       refs.item.dataset.current = String(active)
