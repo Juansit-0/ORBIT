@@ -41,12 +41,22 @@ export const demoTitles = [
   'De Música Ligera',
 ]
 
+export const chartResults = Array.from({ length: 12 }, (_, index) => ({
+  id: `chart-${index + 1}`,
+  title: `Chart Song ${index + 1}`,
+  artist: 'Chart Artist',
+  album: 'Chart Album',
+  artworkUrl: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=',
+  durationMs: 180000,
+}))
+
 export interface ApiMocks {
   resolve: 'ok' | 'quota' | 'not_found'
+  charts: 'ok' | 'flaky'
 }
 
 export const test = base.extend<{ mocks: ApiMocks; listShown: boolean; orbit: OrbitPage }>({
-  mocks: [{ resolve: 'ok' }, { option: true }],
+  mocks: [{ resolve: 'ok', charts: 'ok' }, { option: true }],
   listShown: [true, { option: true }],
   orbit: async ({ page, mocks, listShown }, use) => {
     if (listShown) {
@@ -61,6 +71,12 @@ export const test = base.extend<{ mocks: ApiMocks; listShown: boolean; orbit: Or
       if (term.includes('fail')) return route.fulfill({ status: 502, json: { error: 'upstream_error' } })
       if (term.includes('zzzz')) return route.fulfill({ json: { songs: [] } })
       return route.fulfill({ json: { songs: searchResults } })
+    })
+    let chartCalls = 0
+    await page.route('**/api/charts**', async (route) => {
+      chartCalls += 1
+      if (mocks.charts === 'flaky' && chartCalls === 1) return route.fulfill({ status: 502, json: { error: 'upstream_error' } })
+      return route.fulfill({ json: { songs: chartResults } })
     })
     await page.route('**/api/resolve**', async (route) => {
       const title = new URL(route.request().url()).searchParams.get('title') ?? ''
