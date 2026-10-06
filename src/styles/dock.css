@@ -414,3 +414,41 @@ kbd {
   }
 
 }
+
+.dock__explain {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dock[data-explaining='true'] .dock__now {
+  display: none;
+}
+
+.link__path--explained {
+  stroke: var(--burn-press) !important;
+  stroke-width: 2.6;
+  animation: explain-pulse 0.9s var(--ease-in-out) infinite;
+}
+
+.node--explained .node__card {
+  border-color: var(--burn);
+  box-shadow: 0 0 0 2px var(--burn-wash), 0 0 0 1px var(--burn);
+}
+
+.node__tag--explained {
+  display: block;
+  color: var(--burn-press);
+  animation: explain-pulse 0.9s var(--ease-in-out) infinite;
+}
+
+@keyframes explain-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}

@@ -8,6 +8,8 @@ export interface SettingsOptions {
   onCinemaDelay: (delay: number | null) => void
   cinemaFullscreen: boolean
   onCinemaFullscreen: (enabled: boolean) => void
+  explain: boolean
+  onExplain: (enabled: boolean) => void
 }
 
 const DELAYS: { label: string; value: number | null }[] = [
@@ -55,6 +57,7 @@ export class SettingsMenu {
       ]),
       toggle('setting-fullscreen', 'Full screen in player mode', 'Applies when you enter player mode with O or the button.', options.cinemaFullscreen, options.onCinemaFullscreen),
       toggle('setting-vinyl', 'Spin the cover like a vinyl', 'The cover turns into a spinning record while music plays, and its particles spin with it.', options.vinyl, options.onVinyl),
+      toggle('setting-explain', 'Explain list operations', 'Plays each pointer change step by step in the linked list dock when you add, remove or move a song.', options.explain, options.onExplain),
     ])
   }
 }
