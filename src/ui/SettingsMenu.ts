@@ -12,6 +12,8 @@ export interface SettingsOptions {
   onExplain: (enabled: boolean) => void
   radio: boolean
   onRadio: (enabled: boolean) => void
+  smoothVolume: boolean
+  onSmoothVolume: (enabled: boolean) => void
 }
 
 const DELAYS: { label: string; value: number | null }[] = [
@@ -59,6 +61,7 @@ export class SettingsMenu {
       ]),
       toggle('setting-fullscreen', 'Full screen in player mode', 'Applies when you enter player mode with O or the button.', options.cinemaFullscreen, options.onCinemaFullscreen),
       toggle('setting-vinyl', 'Spin the cover like a vinyl', 'The cover turns into a spinning record while music plays, and its particles spin with it.', options.vinyl, options.onVinyl),
+      toggle('setting-smooth', 'Smooth volume transitions', 'Fade the music out and in when you pause, resume or change songs.', options.smoothVolume, options.onSmoothVolume),
       toggle('setting-radio', 'Offer radio at the end', 'When the flight plan ends, offer to keep playing similar songs without adding them.', options.radio, options.onRadio),
       toggle('setting-explain', 'Explain list operations', 'Plays each pointer change step by step in the linked list dock when you add, remove or move a song.', options.explain, options.onExplain),
     ])

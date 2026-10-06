@@ -9,6 +9,7 @@ import {
   type PlayerSource,
 } from '../../src/player/PlayerAdapter.ts'
 import { ServiceError } from '../../src/services/http.ts'
+import { VolumeFader } from '../../src/player/VolumeFader.ts'
 import { song } from './helpers.ts'
 
 class StubPlayer implements PlayerAdapter {
@@ -52,7 +53,11 @@ class StubPlayer implements PlayerAdapter {
     this.seeks.push(ms)
   }
 
-  setVolume(): void {}
+  volume = 80
+
+  setVolume(volume: number): void {
+    this.volume = volume
+  }
 
   destroy(): void {}
 
@@ -343,6 +348,42 @@ describe('PlaybackController', () => {
       playlist.select(node.id)
       expect(controller.state.inPlan).toBe(true)
       expect(playlist.list.tail?.value.id).toBe('x')
+    })
+  })
+
+  describe('with smooth volume transitions', () => {
+    function instantFader(): VolumeFader {
+      return new VolumeFader({ now: () => 0, schedule: () => 0, cancel: () => undefined }) as VolumeFader
+    }
+
+    it('fades out before pausing and restores the volume', async () => {
+      const volumes: number[] = []
+      full.setVolume = (v: number) => void volumes.push(v)
+      const fader = new VolumeFader({ now: (() => { let t = 0; return () => (t += 400) })(), schedule: (cb) => (cb(), 1), cancel: () => undefined })
+      controller.setFader(fader)
+      await controller.togglePlay()
+      volumes.length = 0
+      await controller.togglePlay()
+      expect(full.playing).toBe(false)
+      expect(volumes).toContain(0)
+      expect(volumes.at(-1)).toBe(80)
+    })
+
+    it('starts new songs from silence and fades in', async () => {
+      const volumes: number[] = []
+      full.setVolume = (v: number) => void volumes.push(v)
+      controller.setFader(new VolumeFader({ now: (() => { let t = 0; return () => (t += 500) })(), schedule: (cb) => (cb(), 1), cancel: () => undefined }))
+      await controller.togglePlay()
+      expect(volumes[0]).toBe(0)
+      expect(volumes.at(-1)).toBe(80)
+    })
+
+    it('restores the volume when transitions are turned off', async () => {
+      const volumes: number[] = []
+      full.setVolume = (v: number) => void volumes.push(v)
+      controller.setFader(instantFader())
+      controller.setFader(null)
+      expect(volumes.at(-1)).toBe(80)
     })
   })
 

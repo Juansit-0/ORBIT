@@ -24,7 +24,14 @@ The linked list dock in the interface draws the live structure: `null`, `HEAD`, 
 - Search the iTunes catalog and play full tracks through YouTube, with a 30 second preview fallback
 - Synced lyrics from LRCLIB, click a line to jump to it
 - Several playlists, a sleep timer, system media controls and keyboard shortcuts
-- Interactive particle planet: cursor trail, click shockwave, morph into the cover on track change and lighting tinted by the cover
+- Play any search result right away without adding it, or queue it right after the current song, or drag it to any position
+- Player mode: after a while without interaction only the planet, the player and karaoke lyrics remain
+- Optional step by step explanation of every pointer change in the linked list dock (off by default)
+- Up next preview on the skip buttons and a command palette (`Ctrl/Cmd+K`)
+- Touch gestures: swipe the cover to skip, long press a song for its actions
+- Radio of similar songs when the flight plan ends, share links, export and import
+- Interactive particle planet that reacts to the music: cursor trail, click shockwave, cover that dissolves into the planet and colours taken from the cover
+- Smooth volume transitions
 
 ## Run it
 
@@ -62,6 +69,8 @@ npm run lint
 | `Ctrl` + `Z` / `Ctrl` + `Shift` + `Z` | Undo / redo |
 | `Alt` + `↑` / `↓` | Move the focused song |
 | `Delete` | Remove the focused song |
+| `O` | Player mode |
+| `Ctrl` + `K` | Command palette |
 | `?` | Show all shortcuts |
 
 ## Stack

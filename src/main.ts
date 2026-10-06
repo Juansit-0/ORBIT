@@ -16,6 +16,7 @@ import type { PlayerAdapter } from './player/PlayerAdapter.ts'
 import { bindMediaSession } from './player/mediaSession.ts'
 import { PreviewPlayer } from './player/PreviewPlayer.ts'
 import { SleepTimer } from './player/SleepTimer.ts'
+import { VolumeFader } from './player/VolumeFader.ts'
 import { YouTubePlayer } from './player/YouTubePlayer.ts'
 import { resolveVideoIds } from './services/resolveService.ts'
 import { mountScene } from './scene/mountScene.ts'
@@ -67,6 +68,8 @@ if (root) {
   const reactor = new AudioReactor(app, previewPlayer?.element ?? null)
   const prefs = loadPrefs()
   playback.setVolume(prefs.volume)
+  const fader = new VolumeFader()
+  playback.setFader(prefs.smoothVolume ? fader : null)
   document.documentElement.dataset.vinyl = String(prefs.vinyl)
   let savedVolume = playback.state.volume
   playback.subscribe((state) => {
@@ -140,6 +143,11 @@ if (root) {
     onCinemaFullscreen: (enabled) => {
       cinemaFullscreen = enabled
       savePrefs({ cinemaFullscreen: enabled })
+    },
+    smoothVolume: prefs.smoothVolume,
+    onSmoothVolume: (enabled) => {
+      playback.setFader(enabled ? fader : null)
+      savePrefs({ smoothVolume: enabled })
     },
     radio: radioEnabled,
     onRadio: (enabled) => {
