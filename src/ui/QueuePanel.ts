@@ -121,7 +121,7 @@ export class QueuePanel {
 
   private renderCurrent(): void {
     const currentId = this.app.playlist.current?.id
-    const playing = this.app.playback.isPlaying
+    const playing = this.app.playback.isPlaying && this.app.playback.state.nodeId === currentId
     for (const [id, refs] of this.rows) {
       const isCurrent = id === currentId
       if (isCurrent) refs.row.setAttribute('aria-current', 'true')

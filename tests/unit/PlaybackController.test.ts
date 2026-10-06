@@ -262,6 +262,75 @@ describe('PlaybackController', () => {
     expect(controller.state.status).toBe('paused')
   })
 
+  describe('songs outside the flight plan', () => {
+    it('plays a song without touching the list', async () => {
+      await controller.playSong({ ...song('x'), previewUrl: 'https://p/x' })
+      expect(full.loaded?.videoId).toBe('v-x')
+      expect(controller.state).toMatchObject({ status: 'playing', inPlan: false })
+      expect(controller.state.song?.id).toBe('x')
+      expect(playlist.size).toBe(3)
+      expect(playlist.current).toBeNull()
+      expect(resolve.mock.calls[0]?.[0].id).toBe('x')
+    })
+
+    it('stops when it ends and replays with repeat one', async () => {
+      await controller.playSong(song('x'))
+      full.end()
+      await flush()
+      expect(controller.state).toMatchObject({ status: 'paused', inPlan: false })
+      expect(playlist.current).toBeNull()
+      playlist.setRepeat('one')
+      await controller.togglePlay()
+      full.end()
+      await flush()
+      expect(full.seeks).toContain(0)
+      expect(controller.state.status).toBe('playing')
+    })
+
+    it('next and previous resume the flight plan where it was', async () => {
+      await controller.playNode(playlist.list.getNode(1)!.id)
+      await controller.playSong(song('x'))
+      expect(await controller.next()).toBe(true)
+      expect(full.loaded?.videoId).toBe('v-b')
+      expect(controller.state.inPlan).toBe(true)
+      await controller.playSong(song('y'))
+      expect(await controller.previous()).toBe(true)
+      expect(full.loaded?.videoId).toBe('v-b')
+    })
+
+    it('starts the flight plan from the head when nothing was playing before', async () => {
+      await controller.playSong(song('x'))
+      await controller.next()
+      expect(playlist.current?.value.id).toBe('a')
+    })
+
+    it('keeps playing when songs are removed from the list', async () => {
+      await controller.playNode(playlist.list.head!.id)
+      await controller.playSong(song('x'))
+      await controller.remove(playlist.list.head!.id)
+      expect(full.loaded?.videoId).toBe('v-x')
+      expect(controller.state.song?.id).toBe('x')
+    })
+
+    it('does not jump into the list when it cannot be played', async () => {
+      resolve.mockRejectedValueOnce(new ServiceError('not_found', 'x'))
+      await controller.playSong(song('x'))
+      await flush()
+      expect(notices.at(-1)).toMatchObject({ type: 'unavailable' })
+      expect(controller.state.status).toBe('idle')
+      expect(playlist.current).toBeNull()
+    })
+
+    it('hands the node over when it is added to the plan', async () => {
+      await controller.playSong(song('x'))
+      const node = controller.takeTransient()!
+      playlist.insertNodeAt(playlist.size, node)
+      playlist.select(node.id)
+      expect(controller.state.inPlan).toBe(true)
+      expect(playlist.list.tail?.value.id).toBe('x')
+    })
+  })
+
   it('clamps seek and volume', async () => {
     await controller.togglePlay()
     controller.seek(-50)

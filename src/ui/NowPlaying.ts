@@ -30,6 +30,7 @@ export class NowPlaying {
   readonly stage: HTMLElement
   readonly lyricsButton: HTMLButtonElement
   readonly tags: HTMLElement
+  private readonly planTag: HTMLButtonElement
   private readonly scale = el('div', { class: 'seek-scale', attrs: { 'aria-hidden': 'true' } })
   private readonly liquid = new LiquidProgress()
   private seeking = false
@@ -56,6 +57,16 @@ export class NowPlaying {
     this.title = el('h1', { class: 'deck__title', text: 'Orbit' })
     this.artist = el('p', { class: 'deck__artist', text: 'Add a song to launch the flight plan.' })
     this.source = el('p', { class: 'badge', attrs: { hidden: true } })
+    this.planTag = el('button', {
+      class: 'chip deck__chip plan-tag',
+      attrs: {
+        type: 'button',
+        hidden: true,
+        title: 'Not in your flight plan. Add it at the end.',
+        'aria-label': 'Not in your flight plan. Add to plan',
+      },
+    }, [icon('plus'), el('span', { text: 'Add to plan' })])
+    this.planTag.addEventListener('click', () => void this.app.addPlayingToPlan())
     this.lyricsButton = el('button', {
       class: 'chip deck__chip deck__lyrics',
       attrs: { type: 'button', 'aria-pressed': 'false', 'aria-controls': 'pane-lyrics' },
@@ -85,7 +96,7 @@ export class NowPlaying {
         ]),
         this.title,
         this.artist,
-        (this.tags = el('div', { class: 'deck__tags' }, [this.source, this.lyricsButton])),
+        (this.tags = el('div', { class: 'deck__tags' }, [this.source, this.planTag, this.lyricsButton])),
       ]),
       el('div', { class: 'deck__controls' }, [
         el('div', { class: 'seek' }, [el('div', { class: 'seek__bar' }, [this.liquid.canvas, this.seek]), this.scale]),
@@ -186,8 +197,8 @@ export class NowPlaying {
 
   private render(state: PlaybackState): void {
     const playlist = this.app.playlist
-    const node = state.nodeId ? playlist.list.findById(state.nodeId) : playlist.current
-    const song = node?.value ?? null
+    const song = state.song ?? (state.nodeId ? null : (playlist.current?.value ?? null))
+    this.planTag.hidden = !(state.song && !state.inPlan)
     const playing = state.status === 'playing' || state.status === 'loading'
     this.lens.dataset.state = song ? 'cover' : 'empty'
     const playingNow = state.status === 'playing'
@@ -243,8 +254,10 @@ export class NowPlaying {
     this.playButton.replaceChildren(icon(playing ? 'pause' : 'play', 'icon play__icon'))
     this.playButton.setAttribute('aria-label', playing ? 'Pause' : 'Play')
     this.playButton.dataset.loading = String(state.status === 'loading')
-    this.updateSkip(this.prevButton, playlist.hasPrevious(), playlist.isEmpty() ? 'Add songs first' : 'This is the first song', 'Previous song')
-    this.updateSkip(this.nextButton, playlist.hasNext(), playlist.isEmpty() ? 'Add songs first' : 'This is the last song', 'Next song')
+    const loose = Boolean(state.song && !state.inPlan)
+    const resume = 'Back to your flight plan'
+    this.updateSkip(this.prevButton, loose ? !playlist.isEmpty() : playlist.hasPrevious(), playlist.isEmpty() ? 'Add songs first' : 'This is the first song', loose ? resume : 'Previous song')
+    this.updateSkip(this.nextButton, loose ? !playlist.isEmpty() : playlist.hasNext(), playlist.isEmpty() ? 'Add songs first' : 'This is the last song', loose ? resume : 'Next song')
     this.shuffleButton.setAttribute('aria-pressed', String(playlist.shuffle))
     this.shuffleButton.title = playlist.shuffle ? 'Shuffle on' : 'Shuffle off'
     const repeatLabel = { off: 'Repeat off', all: 'Repeat all', one: 'Repeat one' }[playlist.repeat]

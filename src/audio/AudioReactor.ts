@@ -83,8 +83,7 @@ export class AudioReactor {
     app.playback.subscribe((state) => {
       this.positionMs = state.currentMs
       this.positionStamp = performance.now()
-      const node = state.nodeId ? app.playlist.list.findById(state.nodeId) : null
-      if (node) void this.prepare(node.value)
+      if (state.song) void this.prepare(state.song)
       this.emit()
     })
   }
@@ -205,9 +204,8 @@ export class AudioReactor {
   }
 
   private currentProfile(): SongProfile | null {
-    const nodeId = this.app.playback.state.nodeId
-    const node = nodeId ? this.app.playlist.list.findById(nodeId) : null
-    return node ? (this.profiles.get(node.value.id) ?? null) : null
+    const song = this.app.playback.state.song
+    return song ? (this.profiles.get(song.id) ?? null) : null
   }
 
   private async prepare(song: Song): Promise<void> {

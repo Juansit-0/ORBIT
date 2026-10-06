@@ -120,8 +120,29 @@ export class PlayerApp {
     await this.playback.playNode(nodeId)
   }
 
+  async playNow(song: Song): Promise<void> {
+    await this.playback.playSong(song)
+  }
+
+  async addPlayingToPlan(): Promise<void> {
+    const node = this.playback.transientNode
+    if (!node) return
+    await this.history.run({
+      label: `Add ${quoted(node.value.title)} last`,
+      execute: () => {
+        const taken = this.playback.takeTransient() ?? node
+        this.playlist.insertNodeAt(this.playlist.size, taken)
+        this.playlist.select(taken.id)
+      },
+      revert: async () => {
+        await this.playback.remove(node.id)
+      },
+    })
+    this.confirmAdd(node.value, this.playlist.size, false)
+  }
+
   async togglePlay(): Promise<void> {
-    if (this.playlist.isEmpty()) {
+    if (this.playlist.isEmpty() && !this.playback.transientNode) {
       showToast({ tone: 'info', title: 'The flight plan is empty', detail: 'Search for a song and add it to start playing.' })
       return
     }

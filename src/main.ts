@@ -116,8 +116,7 @@ if (root) {
   const compact = window.matchMedia('(max-width: 920px)')
   const placeMonitor = () => monitor.place(compact.matches ? now.lensRect() : null)
   playback.subscribe((state) => {
-    const node = state.nodeId ? playlist.list.findById(state.nodeId) : null
-    monitor.setActive(state.source === 'full', node?.value.title ?? '')
+    monitor.setActive(state.source === 'full', state.song?.title ?? '')
     requestAnimationFrame(placeMonitor)
   })
   window.addEventListener('resize', placeMonitor)
@@ -127,7 +126,7 @@ if (root) {
   root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel)
   mountOrbitCursor()
   mountToasts(document.body)
-  mountScene(now.stage, playlist, playback, (scene) => {
+  mountScene(now.stage, playback, (scene) => {
     now.onCoverReveal((shown) => scene.setCoverShown(shown))
     scene.setAudio(() => reactor.features())
   })

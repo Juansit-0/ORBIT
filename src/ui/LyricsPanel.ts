@@ -36,8 +36,7 @@ export class LyricsPanel {
   }
 
   private currentSong(state: PlaybackState): Song | null {
-    const node = state.nodeId ? this.app.playlist.list.findById(state.nodeId) : this.app.playlist.current
-    return node?.value ?? null
+    return state.song ?? (state.nodeId ? null : (this.app.playlist.current?.value ?? null))
   }
 
   private sync(state: PlaybackState): void {
