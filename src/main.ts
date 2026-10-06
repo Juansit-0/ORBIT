@@ -21,6 +21,7 @@ import { mountToasts } from './ui/components/toast.ts'
 import { el } from './ui/dom.ts'
 import { Masthead } from './ui/Masthead.ts'
 import { MobileTabs } from './ui/MobileTabs.ts'
+import { Monitor } from './ui/Monitor.ts'
 import { NodeVisualizer } from './ui/NodeVisualizer.ts'
 import { NowPlaying } from './ui/NowPlaying.ts'
 import { QueuePanel } from './ui/QueuePanel.ts'
@@ -45,10 +46,10 @@ if (root) {
   }
   const library = new PlaylistLibrary(playlist, savedLibrary)
 
-  const videoHost = el('div')
+  const monitor = new Monitor()
   const fake = import.meta.env.VITE_PLAYER === 'fake'
   const fakePlayer = fake ? new FakePlayer() : null
-  const full: PlayerAdapter = fakePlayer ?? new YouTubePlayer(videoHost)
+  const full: PlayerAdapter = fakePlayer ?? new YouTubePlayer(monitor.host)
   const preview: PlayerAdapter = fakePlayer ?? new PreviewPlayer()
   const playback = new PlaybackController(playlist, { full, preview, resolve: resolveVideoIds })
   const app = new PlayerApp(playlist, playback, library)
@@ -68,7 +69,7 @@ if (root) {
   const search = new SearchPanel(app)
   const lyrics = new LyricsPanel(app)
   const rail = new LeftRail(search.root, lyrics.root)
-  const now = new NowPlaying(app, videoHost)
+  const now = new NowPlaying(app)
   const libraryMenu = new LibraryMenu(app)
   const queue = new QueuePanel(app, libraryMenu.button)
   const visualizer = new NodeVisualizer(app)
@@ -105,11 +106,22 @@ if (root) {
   })
   masthead.actions.append(now.volumeControl, sleepMenu.button, settings.button, help.button)
 
-  shell.append(masthead.root, rail.root, now.root, visualizer.root, queue.root, tabs.root)
+  shell.append(masthead.root, rail.root, now.root, visualizer.root, queue.root, monitor.root, tabs.root)
+  const compact = window.matchMedia('(max-width: 920px)')
+  const placeMonitor = () => monitor.place(compact.matches ? now.lensRect() : null)
+  playback.subscribe((state) => {
+    const node = state.nodeId ? playlist.list.findById(state.nodeId) : null
+    monitor.setActive(state.source === 'full', node?.value.title ?? '')
+    requestAnimationFrame(placeMonitor)
+  })
+  window.addEventListener('resize', placeMonitor)
+  compact.addEventListener('change', placeMonitor)
+  now.root.addEventListener('scroll', placeMonitor, { passive: true })
+  new ResizeObserver(placeMonitor).observe(now.stage)
   root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel)
   mountOrbitCursor()
   mountToasts(document.body)
-  mountScene(now.stage, playlist, playback)
+  mountScene(now.stage, playlist, playback, (scene) => now.onCoverReveal((shown) => scene.setCoverShown(shown)))
   bindShortcuts(
     app,
     {

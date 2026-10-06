@@ -31,6 +31,7 @@ export class MobileTabs {
 
   show(view: View): void {
     this.shell.dataset.view = view
+    window.dispatchEvent(new Event('resize'))
     for (const [key, button] of this.buttons) button.setAttribute('aria-pressed', String(key === view))
   }
 }
