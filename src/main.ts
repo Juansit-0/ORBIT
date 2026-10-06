@@ -163,7 +163,7 @@ if (root) {
       search.focus()
     },
   })
-  root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog)
+  root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
   mountOrbitCursor()
   mountToasts(document.body)
   mountScene(now.stage, playback, (scene) => {

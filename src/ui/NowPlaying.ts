@@ -5,6 +5,7 @@ import { formatTime } from './format.ts'
 import { icon } from './icons.ts'
 import { coverShown, START_HOLD_MS } from './coverReveal.ts'
 import { LiquidProgress } from './LiquidProgress.ts'
+import { classifySwipe } from './gestures.ts'
 import { cascadeText, fadeSwap, magnetize, reducedMotion } from './motion.ts'
 
 export class NowPlaying {
@@ -142,12 +143,7 @@ export class NowPlaying {
       window.clearTimeout(this.leaveTimer)
       this.leaveTimer = window.setTimeout(() => this.setHovering(false), 350)
     })
-    this.stage.addEventListener('pointerdown', (event) => {
-      if (event.pointerType === 'mouse') return
-      window.clearTimeout(this.leaveTimer)
-      this.setHovering(true)
-      this.leaveTimer = window.setTimeout(() => this.setHovering(false), 3000)
-    })
+    this.bindSwipe()
     app.playback.subscribe((state) => this.render(state))
     app.playlist.subscribe(() => this.render(app.playback.state))
   }
@@ -195,6 +191,54 @@ export class NowPlaying {
   lensRect(): DOMRect | null {
     const rect = this.lens.getBoundingClientRect()
     return rect.width > 0 ? rect : null
+  }
+
+  private bindSwipe(): void {
+    let start: { x: number; y: number; time: number; id: number } | null = null
+    const release = (dx: number) => {
+      this.lens.style.transition = 'transform 420ms cubic-bezier(0.16, 1, 0.3, 1)'
+      this.lens.style.transform = dx === 0 ? '' : `translateX(${dx}px)`
+      window.setTimeout(() => {
+        this.lens.style.transform = ''
+        window.setTimeout(() => (this.lens.style.transition = ''), 420)
+      }, dx === 0 ? 0 : 160)
+    }
+    this.stage.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse') return
+      start = { x: event.clientX, y: event.clientY, time: performance.now(), id: event.pointerId }
+    })
+    this.stage.addEventListener('pointermove', (event) => {
+      if (!start || event.pointerId !== start.id) return
+      const dx = event.clientX - start.x
+      const dy = event.clientY - start.y
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+        this.lens.style.transition = 'none'
+        this.lens.style.transform = `translateX(${dx * 0.45}px) rotate(${dx * 0.02}deg)`
+      }
+    })
+    const finish = (event: PointerEvent) => {
+      if (!start || event.pointerId !== start.id) return
+      const dx = event.clientX - start.x
+      const dy = event.clientY - start.y
+      const swipe = event.type === 'pointerup' ? classifySwipe(dx, dy, performance.now() - start.time) : null
+      start = null
+      if (swipe === 'left') {
+        release(-60)
+        void this.app.next()
+      } else if (swipe === 'right') {
+        release(60)
+        void this.app.previous()
+      } else {
+        release(0)
+        if (event.type === 'pointerup' && Math.hypot(dx, dy) < 10) {
+          window.clearTimeout(this.leaveTimer)
+          this.setHovering(true)
+          this.leaveTimer = window.setTimeout(() => this.setHovering(false), 3000)
+        }
+      }
+    }
+    this.stage.addEventListener('pointerup', finish)
+    this.stage.addEventListener('pointercancel', finish)
   }
 
   resetHover(): void {
