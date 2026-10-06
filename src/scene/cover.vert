@@ -9,6 +9,8 @@ uniform float uAngle;
 uniform float uRound;
 uniform float uCorner;
 uniform vec3 uCenter;
+uniform vec3 uPaper;
+uniform vec3 uInk;
 uniform vec2 uCameraOffset;
 uniform mat4 uSphereMatrix;
 
@@ -38,7 +40,11 @@ void main() {
   float corner = length(max(q, 0.0)) - uCorner;
   float cut = max(uRound * smoothstep(0.98, 1.02, length(aGrid)), step(0.0, corner));
   float outside = cut;
-  vColor = aColor;
+  float radius = length(aGrid);
+  vec3 tint = aColor;
+  tint = mix(tint, uInk, uRound * (1.0 - smoothstep(0.125, 0.135, radius)));
+  tint = mix(tint, uPaper, uRound * (1.0 - smoothstep(0.095, 0.105, radius)));
+  vColor = tint;
   vAlpha = (1.0 - smoothstep(0.55, 1.0, local)) * (1.0 - outside * (1.0 - local));
   vec4 mvPosition = viewMatrix * vec4(world, 1.0);
   gl_Position = projectionMatrix * mvPosition;

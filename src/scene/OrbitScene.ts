@@ -48,6 +48,10 @@ export interface PlaybackInput {
   artworkUrl: string | null
 }
 
+function vinylCorner(lens: { size: number; radius: number }): number {
+  return Math.min(1, (lens.radius * 2) / Math.max(1, lens.size))
+}
+
 function coverAngle(element: HTMLElement): number {
   const transform = getComputedStyle(element).transform
   const match = /matrix\(([^,]+),\s*([^,]+)/.exec(transform)
@@ -235,6 +239,8 @@ export class OrbitScene {
         uRound: { value: 0 },
         uGrowTo: { value: 1.6 },
         uCorner: { value: 0 },
+        uPaper: { value: token('--paper', '#f7fafc') },
+        uInk: { value: token('--ink', '#10324a') },
         uCameraOffset: { value: new Vector2() },
       },
     })
@@ -319,7 +325,8 @@ export class OrbitScene {
     if (!lens || lens.offsetWidth === 0) return null
     const stage = this.anchor.getBoundingClientRect()
     if (stage.width === 0) return null
-    const radius = Number.parseFloat(getComputedStyle(lens).borderTopLeftRadius) || 0
+    const raw = getComputedStyle(lens).borderTopLeftRadius
+    const radius = raw.endsWith('%') ? (Number.parseFloat(raw) / 100) * lens.offsetWidth : Number.parseFloat(raw) || 0
     return { x: stage.left + stage.width / 2, y: stage.top + stage.height / 2, size: lens.offsetWidth, radius }
   }
 
@@ -341,7 +348,7 @@ export class OrbitScene {
     uniforms.uScale!.value = this.points.scale.x
     uniforms.uGrowTo!.value = Math.max(1, (this.points.scale.x * 0.9) / half)
     uniforms.uGridSize!.value = (lens.size / COVER_GRID) * 1.5
-    uniforms.uCorner!.value = Math.min(1, (lens.radius * 2) / lens.size)
+    uniforms.uCorner!.value = vinylCorner(lens)
     ;(uniforms.uCameraOffset!.value as Vector2).set(this.camera.position.x, this.camera.position.y)
     const cover = this.anchor.querySelector<HTMLElement>('.lens__cover')
     const vinyl = document.documentElement.dataset.vinyl === 'true'

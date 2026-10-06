@@ -1980,7 +1980,6 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 
 [data-vinyl='true'] .lens[data-state='cover'] {
   border-radius: 50%;
-  transition: border-radius var(--dur-4) var(--ease-out);
 }
 
 [data-vinyl='true'] .lens[data-state='cover']::after {
