@@ -1,0 +1,17 @@
+{
+  "name": "Orbit",
+  "short_name": "Orbit",
+  "description": "A music player built on a doubly linked list. Queue any song at the start, the end or an exact position and play it in full.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#E8F1F8",
+  "theme_color": "#E8F1F8",
+  "categories": ["music", "education"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
