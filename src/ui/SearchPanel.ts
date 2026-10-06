@@ -14,6 +14,7 @@ export class SearchPanel {
   readonly input: HTMLInputElement
   private readonly app: PlayerApp
   private readonly body: HTMLElement
+  private readonly panel: HTMLElement
   private readonly clear: HTMLButtonElement
   private timer: number | undefined
   private abort: AbortController | null = null
@@ -30,6 +31,8 @@ export class SearchPanel {
         autocomplete: 'off',
         spellcheck: 'false',
         enterkeyhint: 'search',
+        'aria-controls': 'search-results',
+        'aria-expanded': 'false',
       },
     })
     this.clear = el('button', {
@@ -42,13 +45,33 @@ export class SearchPanel {
       this.input,
       this.clear,
     ])
-    this.body = el('div', { class: 'rail__body', attrs: { 'aria-live': 'polite' } })
-    this.root = el('div', { class: 'rail-pane' }, [form, this.body])
+    this.body = el('div', { class: 'finder__body', attrs: { 'aria-live': 'polite' } })
+    this.panel = el('div', { class: 'finder__panel', attrs: { id: 'search-results', role: 'region', 'aria-label': 'Search results' } }, [this.body])
+    this.root = el('div', { class: 'finder', attrs: { id: 'panel-search', 'data-open': 'false' } }, [form, this.panel])
+    this.input.addEventListener('focus', () => this.open())
+    this.input.addEventListener('click', () => this.open())
+    this.root.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || this.root.dataset.open !== 'true') return
+      event.preventDefault()
+      event.stopPropagation()
+      this.close()
+      this.input.focus()
+    })
+    document.addEventListener('pointerdown', (event) => {
+      if (event.target instanceof Node && this.root.contains(event.target)) return
+      this.close()
+    }, true)
+    this.root.addEventListener('focusout', (event) => {
+      const next = event.relatedTarget
+      if (next instanceof Node && this.root.contains(next)) return
+      if (next instanceof HTMLElement) this.close()
+    })
     form.addEventListener('submit', (event) => {
       event.preventDefault()
       this.run(this.input.value, true)
     })
     this.input.addEventListener('input', () => {
+      this.open()
       this.clear.hidden = this.input.value.length === 0
       window.clearTimeout(this.timer)
       this.timer = window.setTimeout(() => this.run(this.input.value, false), DEBOUNCE_MS)
@@ -68,6 +91,23 @@ export class SearchPanel {
   focus(): void {
     this.input.focus()
     this.input.select()
+    this.open()
+  }
+
+  get isOpen(): boolean {
+    return this.root.dataset.open === 'true'
+  }
+
+  open(): void {
+    if (this.isOpen) return
+    this.root.dataset.open = 'true'
+    this.input.setAttribute('aria-expanded', 'true')
+  }
+
+  close(): void {
+    if (!this.isOpen) return
+    this.root.dataset.open = 'false'
+    this.input.setAttribute('aria-expanded', 'false')
   }
 
   private async run(raw: string, force: boolean): Promise<void> {

@@ -43,7 +43,7 @@ test.describe('player mode', () => {
   })
 
   test('can be turned off in settings and remembers the choice', async ({ page, orbit }) => {
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     await page.locator('label[for="cinema-delay-never"]').click()
     await expect(page.getByRole('radio', { name: 'Never' })).toBeChecked()
     await page.keyboard.press('Escape')
@@ -54,7 +54,7 @@ test.describe('player mode', () => {
     await page.mouse.move(5, 5)
     await page.clock.runFor(60000)
     await expect(page.locator('html')).not.toHaveAttribute('data-cinema', 'true')
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     await expect(page.getByRole('radio', { name: 'Never' })).toBeChecked()
   })
 

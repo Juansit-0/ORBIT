@@ -28,7 +28,7 @@ test.describe('smooth volume transitions', () => {
   })
 
   test('can be turned off so pausing is immediate', async ({ page, orbit }) => {
-    await page.getByRole('button', { name: 'Settings' }).click()
+    await orbit.openMenu('Settings')
     await expect(page.getByRole('switch', { name: /Smooth volume transitions/ })).toBeChecked()
     await page.locator('label[for="setting-smooth"]').click()
     await page.keyboard.press('Escape')

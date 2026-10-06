@@ -137,6 +137,15 @@ export class OrbitPage {
     await this.page.locator('#search-input').press('Enter')
   }
 
+  async openMenu(name: string | RegExp): Promise<void> {
+    await this.page.getByRole('button', { name: 'More', exact: true }).click()
+    await this.page.locator('#more-menu').getByRole('menuitem', { name }).click()
+  }
+
+  async closeSearch(): Promise<void> {
+    await this.page.locator('#search-input').press('Escape')
+  }
+
   result(title: string): Locator {
     return this.page.locator('.result').filter({ has: this.page.locator('.result__title', { hasText: new RegExp(`^${title}$`) }) })
   }

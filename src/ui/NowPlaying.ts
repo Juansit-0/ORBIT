@@ -148,6 +148,10 @@ export class NowPlaying {
     app.playlist.subscribe(() => this.render(app.playback.state))
   }
 
+  mountLyrics(pane: HTMLElement): void {
+    this.root.querySelector('.deck__controls')?.before(pane)
+  }
+
   onCoverReveal(listener: (shown: boolean) => void): void {
     this.revealListener = listener
     this.lastShown = null

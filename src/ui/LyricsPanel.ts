@@ -28,12 +28,22 @@ export class LyricsPanel {
     this.app = app
     this.heading = el('p', { class: 'lyrics__song' })
     this.notice = el('p', { class: 'lyrics__notice', attrs: { hidden: true } })
-    this.body = el('div', { class: 'rail__body lyrics__body', attrs: { 'aria-live': 'polite' } })
-    this.root = el('div', { class: 'rail-pane lyrics' }, [this.heading, this.notice, this.body])
+    this.heading.classList.add('visually-hidden')
+    this.body = el('div', { class: 'lyrics__body', attrs: { 'aria-live': 'polite' } })
+    this.root = el('section', { class: 'lyrics', attrs: { id: 'pane-lyrics', 'aria-label': 'Lyrics', hidden: true } }, [this.heading, this.notice, this.body])
     this.body.addEventListener('wheel', () => (this.userScrollUntil = performance.now() + USER_SCROLL_PAUSE_MS), { passive: true })
     this.body.addEventListener('touchmove', () => (this.userScrollUntil = performance.now() + USER_SCROLL_PAUSE_MS), { passive: true })
     app.playback.subscribe((state) => this.sync(state))
     app.playlist.subscribe(() => this.sync(app.playback.state))
+  }
+
+  get shown(): boolean {
+    return !this.root.hidden
+  }
+
+  setShown(shown: boolean): void {
+    this.root.hidden = !shown
+    if (shown) requestAnimationFrame(() => this.center('auto'))
   }
 
   onActiveLine(listener: (text: string | null) => void): void {
@@ -168,8 +178,14 @@ export class LyricsPanel {
     if (!line) return
     line.setAttribute('aria-current', 'true')
     line.classList.add('lyric--active')
-    if (performance.now() < this.userScrollUntil || !this.root.offsetParent) return
+    if (performance.now() < this.userScrollUntil) return
+    this.center(reducedMotion() ? 'auto' : 'smooth')
+  }
+
+  private center(behavior: ScrollBehavior): void {
+    const line = this.lines[this.active]
+    if (!line || !this.root.offsetParent) return
     const top = line.offsetTop - this.body.clientHeight / 2 + line.offsetHeight / 2
-    this.body.scrollTo({ top, behavior: reducedMotion() ? 'auto' : 'smooth' })
+    this.body.scrollTo({ top, behavior })
   }
 }

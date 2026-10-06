@@ -1,4 +1,5 @@
 .mast,
+.finder,
 .rail,
 .dock,
 .tabs,
@@ -10,6 +11,7 @@
 }
 
 [data-cinema='true'] .mast,
+[data-cinema='true'] .finder,
 [data-cinema='true'] .rail,
 [data-cinema='true'] .dock,
 [data-cinema='true'] .tabs,
@@ -19,12 +21,13 @@
   pointer-events: none;
 }
 
-[data-cinema='true'] .mast {
+[data-cinema='true'] .mast,
+[data-cinema='true'] .finder {
   translate: 0 -14px;
 }
 
-[data-cinema='true'] .rail--search {
-  translate: -18px 0;
+[data-cinema='true'] .lyrics {
+  display: none;
 }
 
 [data-cinema='true'] .rail--queue {
@@ -188,6 +191,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   [data-cinema='true'] .mast,
+  [data-cinema='true'] .finder,
   [data-cinema='true'] .rail,
   [data-cinema='true'] .dock,
   [data-cinema='true'] .tabs {

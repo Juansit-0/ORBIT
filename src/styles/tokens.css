@@ -61,8 +61,7 @@
   --dur-3: 320ms;
   --dur-4: 560ms;
 
-  --rail-search: minmax(300px, 360px);
-  --rail-queue: minmax(320px, 392px);
+  --rail-queue: clamp(380px, 34vw, 460px);
   --focus-ring: 0 0 0 2px var(--paper), 0 0 0 4px var(--chart);
 }
 
