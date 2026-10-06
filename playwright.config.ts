@@ -6,7 +6,7 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: 'list',
-  use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure' },
+  use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure', serviceWorkers: 'block' },
   webServer: {
     command: 'npx vite build --mode e2e && npx vite preview --port 4173 --strictPort',
     env: { VITE_PLAYER: 'fake' },

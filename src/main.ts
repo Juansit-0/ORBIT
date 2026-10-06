@@ -23,6 +23,7 @@ import { mountScene } from './scene/mountScene.ts'
 import { lookupSongs } from './services/lookupService.ts'
 import { decodePlan } from './services/planCodec.ts'
 import { PlayHistory } from './services/history.ts'
+import { registerServiceWorker } from './services/serviceWorker.ts'
 import { loadLibrary, loadPlaylist, loadPrefs, savePrefs } from './services/storage.ts'
 import { showToast } from './ui/components/toast.ts'
 import { mountToasts } from './ui/components/toast.ts'
@@ -47,6 +48,7 @@ import { createLiveSoundChip } from './ui/LiveSoundChip.ts'
 import { bindShortcuts, createShortcutHelp } from './ui/shortcuts.ts'
 
 const root = document.querySelector<HTMLDivElement>('#app')
+registerServiceWorker(import.meta.env.PROD)
 
 if (root) {
   const playlist = new Playlist()

@@ -34,6 +34,7 @@ The linked list dock in the interface draws the live structure: `null`, `HEAD`, 
 - Interactive particle planet that reacts to the music: cursor trail, click shockwave, cover that dissolves into the planet and colours taken from the cover
 - Smooth volume transitions
 - Top charts of your country when the search is empty, ready to play or add
+- Installable as an app, and the interface opens offline after the first visit
 - Recently played: songs heard for 10 seconds or more appear when the search is empty and in the command palette
 
 ## Run it
