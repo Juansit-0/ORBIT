@@ -26,6 +26,7 @@ const PATHS = {
   orbit: `<circle ${STROKE} cx="12" cy="12" r="3.2"/><ellipse ${STROKE} cx="12" cy="12" rx="9.5" ry="4.2" transform="rotate(-24 12 12)"/>`,
   undo: `<path ${STROKE} d="M9 14.5 4.5 10 9 5.5M4.5 10h10a5 5 0 0 1 0 10H11"/>`,
   redo: `<path ${STROKE} d="m15 14.5 4.5-4.5L15 5.5M19.5 10h-10a5 5 0 0 0 0 10H13"/>`,
+  lyrics: `<path ${STROKE} d="M4 6h12M4 10h16M4 14h9M4 18h12M18 14.5v5.2M18 19.7a1.8 1.8 0 1 1-1.8-1.8H18"/>`,
   music: `<path ${STROKE} d="M9 18.5V6.2l10-2v12.3M9 18.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM19 16.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM9 10l10-2"/>`,
 } as const
 
