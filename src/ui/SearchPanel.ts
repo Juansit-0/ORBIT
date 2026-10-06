@@ -5,6 +5,7 @@ import { ServiceError } from '../services/http.ts'
 import { el, setText } from './dom.ts'
 import { formatTime } from './format.ts'
 import { icon } from './icons.ts'
+import { endSongDrag, startSongDrag } from './dropInsert.ts'
 
 const DEBOUNCE_MS = 350
 
@@ -181,21 +182,25 @@ export class SearchPanel {
       class: 'chip chip--play',
       attrs: { type: 'button', 'aria-label': `Play ${label} now without adding it`, title: 'Play now without adding it' },
     }, [icon('playSmall'), el('span', { text: 'Play' })])
+    const nextButton = el('button', {
+      class: 'chip',
+      attrs: { type: 'button', 'aria-label': `Play ${label} next, right after the current song`, title: 'Play next, right after the current song' },
+    }, [icon('next2'), el('span', { text: 'Next' })])
     const firstButton = el('button', {
-      class: 'chip',
-      attrs: { type: 'button', 'aria-label': `Add ${label} at the start` },
-    }, [icon('toFirst'), el('span', { text: 'First' })])
+      class: 'chip chip--icon',
+      attrs: { type: 'button', 'aria-label': `Add ${label} at the start`, title: 'Add first' },
+    }, [icon('toFirst')])
     const lastButton = el('button', {
-      class: 'chip',
-      attrs: { type: 'button', 'aria-label': `Add ${label} at the end` },
-    }, [icon('toLast'), el('span', { text: 'Last' })])
+      class: 'chip chip--icon',
+      attrs: { type: 'button', 'aria-label': `Add ${label} at the end`, title: 'Add last' },
+    }, [icon('toLast')])
     const item = el('li', { class: 'result' }, [
       el('img', { class: 'result__cover', attrs: { src: song.artworkUrl.replace('600x600', '120x120'), alt: '', width: 48, height: 48, loading: 'lazy', decoding: 'async' } }),
       el('div', { class: 'result__meta' }, [
         el('p', { class: 'result__title', text: song.title }),
         el('p', { class: 'result__artist', text: `${song.artist} · ${formatTime(song.durationMs)}` }),
       ]),
-      el('div', { class: 'result__actions' }, [playButton, firstButton, lastButton, atButton]),
+      el('div', { class: 'result__actions' }, [playButton, nextButton, firstButton, lastButton, atButton]),
       insertForm,
     ])
     const setOpen = (open: boolean) => {
@@ -213,6 +218,21 @@ export class SearchPanel {
       }
     }
     playButton.addEventListener('click', () => void this.app.playNow(song))
+    nextButton.addEventListener('click', () => void this.app.playNext(song))
+    item.draggable = true
+    item.title = 'Drag into the flight plan or the linked list'
+    item.addEventListener('dragstart', (event) => {
+      if (event.target instanceof HTMLElement && event.target.closest('input, button')) {
+        event.preventDefault()
+        return
+      }
+      item.classList.add('result--dragging')
+      startSongDrag(event, song, item.querySelector('.result__cover'))
+    })
+    item.addEventListener('dragend', () => {
+      item.classList.remove('result--dragging')
+      endSongDrag()
+    })
     firstButton.addEventListener('click', () => void this.app.addFirst(song))
     lastButton.addEventListener('click', () => void this.app.addLast(song))
     atButton.addEventListener('click', () => setOpen(!item.classList.contains('result--inserting')))

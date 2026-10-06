@@ -34,6 +34,7 @@ const PATHS = {
   wave: `<path ${STROKE} d="M3 12h2M7 8v8M11 5v14M15 9v6M19 7v10M21 12h0"/>`,
   playSmall: '<path d="M8.5 6.2v11.6a.7.7 0 0 0 1.07.6l9.1-5.8a.7.7 0 0 0 0-1.2l-9.1-5.8a.7.7 0 0 0-1.07.6Z" fill="currentColor"/>',
   cinema: `<path ${STROKE} d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/><circle ${STROKE} cx="12" cy="12" r="2.6"/>`,
+  next2: `<path ${STROKE} d="M4 7h9M4 12h6M4 17h9M15 9l4 3-4 3"/>`,
   music: `<path ${STROKE} d="M9 18.5V6.2l10-2v12.3M9 18.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM19 16.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM9 10l10-2"/>`,
 } as const
 

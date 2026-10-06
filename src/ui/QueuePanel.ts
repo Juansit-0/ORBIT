@@ -3,6 +3,7 @@ import type { SongNode } from '../core/SongNode.ts'
 import { enableDragReorder } from './dragReorder.ts'
 import { el, setText, toggleAttr } from './dom.ts'
 import { exitRow, FlipTracker, slideIn } from './motion.ts'
+import { enableDropInsert } from './dropInsert.ts'
 import { formatTime, plural } from './format.ts'
 import { icon } from './icons.ts'
 
@@ -30,6 +31,7 @@ export class QueuePanel {
   private readonly empty: HTMLElement
   private readonly noMatch: HTMLElement
   private readonly rows = new Map<string, RowRefs>()
+  private readonly body: HTMLElement
   private readonly flip = new FlipTracker('nodeId')
   private suppressFlip = false
 
@@ -58,9 +60,20 @@ export class QueuePanel {
         icon('search', 'icon filter__icon'),
         this.filter,
       ]),
-      el('div', { class: 'rail__body' }, [this.list, this.noMatch, this.empty]),
+      (this.body = el('div', { class: 'rail__body queue-body' }, [this.list, this.noMatch, this.empty])),
     ])
     this.filter.addEventListener('input', () => this.applyFilter(true))
+    enableDropInsert({
+      zone: this.body,
+      axis: 'y',
+      items: () => [...this.list.querySelectorAll<HTMLElement>('.waypoint:not([data-exiting])')],
+      onDrop: (index, song) => {
+        const rows = [...this.list.querySelectorAll<HTMLElement>('.waypoint:not([data-exiting])')].filter((row) => !row.hidden)
+        const target = rows[index]
+        const position = target ? Number(target.dataset.position) : this.app.playlist.size + 1
+        this.app.insertAt(position, song)
+      },
+    })
     enableDragReorder({
       list: this.list,
       handleSelector: '.waypoint__pos',

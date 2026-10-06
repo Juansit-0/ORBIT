@@ -3,6 +3,7 @@ import type { SongNode } from '../core/SongNode.ts'
 import { el, setText } from './dom.ts'
 import { formatTime } from './format.ts'
 import { drawLinks, FlipTracker, popIn, travel } from './motion.ts'
+import { enableDropInsert } from './dropInsert.ts'
 import type { PlaylistChange } from '../core/Playlist.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -62,6 +63,14 @@ export class NodeVisualizer {
       (this.viewport = el('div', { class: 'dock__viewport' }, [this.track])),
       this.now,
     ])
+    enableDropInsert({
+      zone: this.viewport,
+      axis: 'x',
+      items: () => [...this.track.querySelectorAll<HTMLElement>('.node')],
+      onDrop: (index, song) => {
+        this.app.insertAt(index + 1, song)
+      },
+    })
     app.playlist.subscribe((change) => this.render(change))
     app.playback.subscribe(() => this.renderCurrent())
     this.render('restore')

@@ -226,7 +226,7 @@
   grid-template-columns: 48px minmax(0, 1fr);
   grid-template-areas:
     'cover meta'
-    'cover actions'
+    'actions actions'
     'insert insert';
   column-gap: var(--space-3);
   row-gap: var(--space-2);
@@ -610,6 +610,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-mono);
   color: var(--ink-2);
+  pointer-events: none;
   transition: opacity var(--dur-2) var(--ease-out);
 }
 
@@ -2132,4 +2133,69 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 
 .plan-tag.deck__chip:hover {
   background: var(--ink-2);
+}
+
+.result[draggable='true'] {
+  cursor: grab;
+}
+
+.result--dragging {
+  opacity: 0.45;
+}
+
+.queue-body,
+.dock__viewport {
+  position: relative;
+}
+
+.drop-marker {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: var(--radius-pill);
+  background: var(--burn);
+  box-shadow: 0 0 0 3px rgb(255 122 26 / 0.18);
+}
+
+.drop-marker--y {
+  top: var(--at);
+  left: var(--space-3);
+  right: var(--space-3);
+  height: 3px;
+}
+
+.drop-marker--x {
+  top: 14px;
+  bottom: 8px;
+  left: var(--at);
+  width: 3px;
+}
+
+[data-dragging='song'] .queue-body,
+[data-dragging='song'] .dock__viewport {
+  background: rgb(255 122 26 / 0.04);
+  transition: background-color var(--dur-2) var(--ease-out);
+}
+
+[data-drop-active='true'] {
+  background: rgb(255 122 26 / 0.08) !important;
+}
+
+.chip--icon {
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+}
+
+.result__actions {
+  gap: 3px;
+}
+
+.result__actions .chip {
+  gap: 5px;
+  padding: 0 8px 0 7px;
+}
+
+.result__actions .chip--icon {
+  padding: 0;
 }

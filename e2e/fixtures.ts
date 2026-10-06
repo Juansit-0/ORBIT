@@ -137,8 +137,10 @@ export class OrbitPage {
 
   async rowAction(title: string, name: RegExp): Promise<void> {
     const row = this.row(title)
+    const button = row.getByRole('button', { name })
     await row.hover()
-    await row.getByRole('button', { name }).click()
+    await expect(button).toHaveCSS('pointer-events', 'auto')
+    await button.click()
   }
 
   transport(name: string): Locator {

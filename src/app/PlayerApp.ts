@@ -120,6 +120,19 @@ export class PlayerApp {
     await this.playback.playNode(nodeId)
   }
 
+  async playNext(song: Song): Promise<void> {
+    const duplicate = this.playlist.containsSong(song.id)
+    const current = this.playlist.current
+    const target = () => (this.playlist.current ? this.playlist.indexOfCurrent() + 1 : this.playlist.size)
+    await this.history.run(this.insertCommand(target, song, `Play ${quoted(song.title)} next`))
+    const index = current ? this.playlist.indexOfCurrent() + 2 : this.playlist.size
+    showToast({
+      tone: 'success',
+      title: duplicate ? `${quoted(song.title)} plays next again` : `${quoted(song.title)} plays next`,
+      detail: current ? `Position ${index} of ${this.playlist.size}, right after ${quoted(current.value.title)}.` : `Position ${this.playlist.size} of ${this.playlist.size}.`,
+    })
+  }
+
   async playNow(song: Song): Promise<void> {
     await this.playback.playSong(song)
   }
