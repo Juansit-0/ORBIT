@@ -24,6 +24,8 @@ const PATHS = {
   alert: `<path ${STROKE} d="M12 8.5v4.5M12 16.4h.01M10.3 4.2 2.9 17.4A2 2 0 0 0 4.6 20.4h14.8a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/>`,
   info: `<circle ${STROKE} cx="12" cy="12" r="8.5"/><path ${STROKE} d="M12 11v5M12 8h.01"/>`,
   orbit: `<circle ${STROKE} cx="12" cy="12" r="3.2"/><ellipse ${STROKE} cx="12" cy="12" rx="9.5" ry="4.2" transform="rotate(-24 12 12)"/>`,
+  undo: `<path ${STROKE} d="M9 14.5 4.5 10 9 5.5M4.5 10h10a5 5 0 0 1 0 10H11"/>`,
+  redo: `<path ${STROKE} d="m15 14.5 4.5-4.5L15 5.5M19.5 10h-10a5 5 0 0 0 0 10H13"/>`,
   music: `<path ${STROKE} d="M9 18.5V6.2l10-2v12.3M9 18.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM19 16.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM9 10l10-2"/>`,
 } as const
 
