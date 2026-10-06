@@ -14,7 +14,7 @@ import { bindMediaSession } from './player/mediaSession.ts'
 import { PreviewPlayer } from './player/PreviewPlayer.ts'
 import { SleepTimer } from './player/SleepTimer.ts'
 import { YouTubePlayer } from './player/YouTubePlayer.ts'
-import { resolveVideoId } from './services/resolveService.ts'
+import { resolveVideoIds } from './services/resolveService.ts'
 import { mountScene } from './scene/mountScene.ts'
 import { loadLibrary, loadPlaylist, loadPrefs, savePrefs } from './services/storage.ts'
 import { mountToasts } from './ui/components/toast.ts'
@@ -50,7 +50,7 @@ if (root) {
   const fakePlayer = fake ? new FakePlayer() : null
   const full: PlayerAdapter = fakePlayer ?? new YouTubePlayer(videoHost)
   const preview: PlayerAdapter = fakePlayer ?? new PreviewPlayer()
-  const playback = new PlaybackController(playlist, { full, preview, resolve: resolveVideoId })
+  const playback = new PlaybackController(playlist, { full, preview, resolve: resolveVideoIds })
   const app = new PlayerApp(playlist, playback, library)
   const prefs = loadPrefs()
   playback.setVolume(prefs.volume)

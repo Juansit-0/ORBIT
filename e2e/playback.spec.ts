@@ -97,6 +97,20 @@ test.describe('fallbacks', () => {
   })
 })
 
+test.describe('blocked videos', () => {
+  test('falls back to the preview when YouTube refuses to embed the video', async ({ orbit }) => {
+    await orbit.search('radiohead')
+    await orbit.result('Karma Police').getByRole('button', { name: /at the start/ }).click()
+    await orbit.row('Karma Police').locator('.waypoint__main').click()
+    await expect(orbit.page.locator('.badge')).toHaveText('Full track')
+    await orbit.page.evaluate(() => window.orbitFakePlayer?.fail())
+    await expect(orbit.page.locator('.badge')).toHaveText('30 s preview')
+    await expect(orbit.toast(/30 s preview of \u201cKarma Police\u201d/)).toContainText('cannot be played outside YouTube')
+    await expect.poll(() => orbit.currentTitle()).toBe('Karma Police')
+    await expect(orbit.row('Karma Police').locator('.waypoint__status')).toBeHidden()
+  })
+})
+
 test.describe('unavailable songs', () => {
   test('skips a song that cannot be played anywhere', async ({ orbit }) => {
     await orbit.search('nobody')

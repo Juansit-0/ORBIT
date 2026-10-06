@@ -250,6 +250,11 @@ describe('Playlist', () => {
       expectIntegrity(restored.list)
     })
 
+    it('forgets unavailable flags when restoring', () => {
+      playlist.restore({ songs: [{ ...song('a'), unavailable: true }], currentIndex: 0, repeat: 'off', shuffle: false })
+      expect(playlist.list.head?.value.unavailable).toBeUndefined()
+    })
+
     it('restores an empty snapshot', () => {
       playlist.restore({ songs: [], currentIndex: -1, repeat: 'off', shuffle: false })
       expect(playlist.isEmpty()).toBe(true)

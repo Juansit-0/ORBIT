@@ -29,7 +29,7 @@ interface ItunesTrack {
 const ITUNES_URL = 'https://itunes.apple.com/search'
 const YOUTUBE_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search'
 const YOUTUBE_VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos'
-const resolveCache = new Map<string, string>()
+const resolveCache = new Map<string, string[]>()
 
 export function mapItunesTrack(track: ItunesTrack): ApiSong | null {
   if (!track.trackId || !track.trackName || !track.artistName) return null
@@ -71,6 +71,18 @@ export function parseIsoDuration(value: string): number {
   return ((((days ?? 0) * 24 + (hours ?? 0)) * 60 + (minutes ?? 0)) * 60 + (seconds ?? 0)) * 1000
 }
 
+export function rankVideos(candidates: { id: string; durationMs: number }[], targetMs: number): string[] {
+  const best = pickClosestVideo(candidates, targetMs)
+  if (!best) return []
+  const rest = candidates
+    .filter((candidate) => candidate.id !== best)
+    .sort((a, b) =>
+      targetMs > 0 ? Math.abs(a.durationMs - targetMs) - Math.abs(b.durationMs - targetMs) : 0,
+    )
+    .map((candidate) => candidate.id)
+  return [best, ...rest]
+}
+
 export function pickClosestVideo(
   candidates: { id: string; durationMs: number }[],
   targetMs: number,
@@ -107,7 +119,7 @@ export async function resolveVideo(
   if (!apiKey) return { status: 503, body: { error: 'missing_key' } }
   const cacheKey = `${artist}::${title}`.toLowerCase()
   const cached = resolveCache.get(cacheKey)
-  if (cached) return { status: 200, body: { videoId: cached } }
+  if (cached) return { status: 200, body: { videoId: cached[0], candidates: cached } }
   try {
     const searchUrl = new URL(YOUTUBE_SEARCH_URL)
     searchUrl.search = new URLSearchParams({
@@ -136,10 +148,10 @@ export async function resolveVideo(
       const details = videosData.items?.find((item) => item.id === id)
       return { id, durationMs: parseIsoDuration(details?.contentDetails?.duration ?? '') }
     })
-    const videoId = pickClosestVideo(candidates, params.durationMs)
-    if (!videoId) return { status: 404, body: { error: 'not_found' } }
-    resolveCache.set(cacheKey, videoId)
-    return { status: 200, body: { videoId } }
+    const ranked = rankVideos(candidates, params.durationMs)
+    if (ranked.length === 0) return { status: 404, body: { error: 'not_found' } }
+    resolveCache.set(cacheKey, ranked)
+    return { status: 200, body: { videoId: ranked[0], candidates: ranked } }
   } catch {
     return { status: 502, body: { error: 'upstream_error' } }
   }

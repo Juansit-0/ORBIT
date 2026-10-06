@@ -120,8 +120,8 @@ describe('resolveVideo', () => {
           ],
         }),
       )
-    expect((await resolveVideo(params, 'k', fetcher)).body).toEqual({ videoId: 'b' })
-    expect((await resolveVideo(params, 'k', fetcher)).body).toEqual({ videoId: 'b' })
+    expect((await resolveVideo(params, 'k', fetcher)).body).toEqual({ videoId: 'b', candidates: ['b', 'a'] })
+    expect((await resolveVideo(params, 'k', fetcher)).body).toEqual({ videoId: 'b', candidates: ['b', 'a'] })
     expect(fetcher).toHaveBeenCalledTimes(2)
   })
 

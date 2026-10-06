@@ -223,6 +223,7 @@ export class PlayerApp {
         missing_key: 'The YouTube key is not configured.',
         network: 'YouTube could not be reached.',
         not_found: 'No full version was found on YouTube.',
+        blocked: 'Its YouTube videos cannot be played outside YouTube.',
       }[notice.reason]
       showToast({ tone: 'info', title: `Playing a 30 s preview of ${quoted(notice.song.title)}`, detail: reason })
     }
