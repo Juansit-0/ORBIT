@@ -12,6 +12,7 @@ import type { PlayerAdapter } from './player/PlayerAdapter.ts'
 import { PreviewPlayer } from './player/PreviewPlayer.ts'
 import { YouTubePlayer } from './player/YouTubePlayer.ts'
 import { resolveVideoId } from './services/resolveService.ts'
+import { mountScene } from './scene/mountScene.ts'
 import { loadPlaylist, loadPrefs, savePrefs } from './services/storage.ts'
 import { mountToasts } from './ui/components/toast.ts'
 import { el } from './ui/dom.ts'
@@ -60,6 +61,7 @@ if (root) {
   shell.append(masthead.root, search.root, now.root, visualizer.root, queue.root, tabs.root)
   root.append(shell, help.panel)
   mountToasts(document.body)
+  mountScene(now.stage, playlist, playback)
   bindShortcuts(
     app,
     {
