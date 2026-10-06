@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
   if (env.YOUTUBE_API_KEY) process.env.YOUTUBE_API_KEY = env.YOUTUBE_API_KEY
   return {
     plugins: [localApi()],
-    server: { port: 5173 },
+    server: { port: 5199 },
     test: {
       include: ['tests/unit/**/*.test.ts'],
       environment: 'node',
