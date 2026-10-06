@@ -28,6 +28,8 @@ import { LeftRail } from './ui/LeftRail.ts'
 import { LibraryMenu } from './ui/LibraryMenu.ts'
 import { LyricsPanel } from './ui/LyricsPanel.ts'
 import { SearchPanel } from './ui/SearchPanel.ts'
+import { mountOrbitCursor } from './ui/OrbitCursor.ts'
+import { SettingsMenu } from './ui/SettingsMenu.ts'
 import { SleepMenu } from './ui/SleepMenu.ts'
 import { bindShortcuts, createShortcutHelp } from './ui/shortcuts.ts'
 
@@ -50,7 +52,9 @@ if (root) {
   const preview: PlayerAdapter = fakePlayer ?? new PreviewPlayer()
   const playback = new PlaybackController(playlist, { full, preview, resolve: resolveVideoId })
   const app = new PlayerApp(playlist, playback, library)
-  playback.setVolume(loadPrefs().volume)
+  const prefs = loadPrefs()
+  playback.setVolume(prefs.volume)
+  document.documentElement.dataset.vinyl = String(prefs.vinyl)
   let savedVolume = playback.state.volume
   playback.subscribe((state) => {
     if (state.volume !== savedVolume) {
@@ -92,10 +96,18 @@ if (root) {
   playback.onTrackEnd(() => sleep.songEnded())
   const sleepMenu = new SleepMenu(sleep)
   bindMediaSession(app)
-  masthead.actions.append(now.volumeControl, sleepMenu.button, help.button)
+  const settings = new SettingsMenu({
+    vinyl: prefs.vinyl,
+    onVinyl: (enabled) => {
+      document.documentElement.dataset.vinyl = String(enabled)
+      savePrefs({ vinyl: enabled })
+    },
+  })
+  masthead.actions.append(now.volumeControl, sleepMenu.button, settings.button, help.button)
 
   shell.append(masthead.root, rail.root, now.root, visualizer.root, queue.root, tabs.root)
-  root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel)
+  root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel)
+  mountOrbitCursor()
   mountToasts(document.body)
   mountScene(now.stage, playlist, playback)
   bindShortcuts(

@@ -159,3 +159,27 @@ export function magnetize(button: HTMLElement, strength = 6): void {
     toY(0)
   })
 }
+
+export function travel(host: HTMLElement, track: HTMLElement, from: HTMLElement, to: HTMLElement): void {
+  if (reducedMotion()) return
+  const forward = to.offsetLeft > from.offsetLeft
+  const start = track.offsetLeft + from.offsetLeft + from.offsetWidth / 2
+  const end = track.offsetLeft + to.offsetLeft + to.offsetWidth / 2
+  const spark = document.createElement('span')
+  spark.className = `spark spark--${forward ? 'next' : 'prev'}`
+  spark.setAttribute('aria-hidden', 'true')
+  host.append(spark)
+  const top = track.offsetTop + from.offsetTop + from.offsetHeight / 2 + (forward ? -5 : 5)
+  gsap.fromTo(
+    spark,
+    { x: start, y: top, opacity: 0, scale: 0.6 },
+    {
+      keyframes: [
+        { opacity: 1, scale: 1, duration: 0.12, ease: 'power2.out' },
+        { x: end, duration: Math.min(1.1, 0.35 + Math.abs(end - start) / 600), ease: 'power2.inOut' },
+        { opacity: 0, scale: 1.8, duration: 0.25, ease: 'power2.out' },
+      ],
+      onComplete: () => spark.remove(),
+    },
+  )
+}
