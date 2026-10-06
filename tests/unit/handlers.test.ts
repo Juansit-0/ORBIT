@@ -143,3 +143,26 @@ describe('resolveVideo', () => {
     expect((await resolveVideo(params, 'k', vi.fn().mockRejectedValue(new Error('x')))).status).toBe(502)
   })
 })
+
+import { lookupSongs } from '../../api/_lib/handlers.ts'
+
+describe('lookupSongs', () => {
+  it('returns songs in the requested order and skips missing ones', async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      jsonResponse({
+        results: [
+          { wrapperType: 'track', trackId: 2, trackName: 'Two', artistName: 'B' },
+          { wrapperType: 'track', trackId: 1, trackName: 'One', artistName: 'A' },
+        ],
+      }),
+    )
+    const result = await lookupSongs('1.2.3', fetcher)
+    expect((result.body as { songs: { id: string }[] }).songs.map((s) => s.id)).toEqual(['1', '2'])
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain('id=1%2C2%2C3')
+  })
+
+  it('validates ids and reports upstream errors', async () => {
+    expect((await lookupSongs('abc', vi.fn())).status).toBe(400)
+    expect((await lookupSongs('1', vi.fn().mockResolvedValue(jsonResponse({}, 500)))).status).toBe(502)
+  })
+})
