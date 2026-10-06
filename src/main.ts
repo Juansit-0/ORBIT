@@ -4,6 +4,7 @@ import './styles/layout.css'
 import './styles/components.css'
 import './styles/dock.css'
 import { PlayerApp } from './app/PlayerApp.ts'
+import { AudioReactor } from './audio/AudioReactor.ts'
 import { Playlist } from './core/Playlist.ts'
 import { PlaylistLibrary } from './core/PlaylistLibrary.ts'
 import { demoPlaylist } from './data/demoPlaylist.ts'
@@ -32,6 +33,7 @@ import { SearchPanel } from './ui/SearchPanel.ts'
 import { mountOrbitCursor } from './ui/OrbitCursor.ts'
 import { SettingsMenu } from './ui/SettingsMenu.ts'
 import { SleepMenu } from './ui/SleepMenu.ts'
+import { createLiveSoundChip } from './ui/LiveSoundChip.ts'
 import { bindShortcuts, createShortcutHelp } from './ui/shortcuts.ts'
 
 const root = document.querySelector<HTMLDivElement>('#app')
@@ -50,9 +52,11 @@ if (root) {
   const fake = import.meta.env.VITE_PLAYER === 'fake'
   const fakePlayer = fake ? new FakePlayer() : null
   const full: PlayerAdapter = fakePlayer ?? new YouTubePlayer(monitor.host)
-  const preview: PlayerAdapter = fakePlayer ?? new PreviewPlayer()
+  const previewPlayer = fakePlayer ? null : new PreviewPlayer()
+  const preview: PlayerAdapter = fakePlayer ?? (previewPlayer as PreviewPlayer)
   const playback = new PlaybackController(playlist, { full, preview, resolve: resolveVideoIds })
   const app = new PlayerApp(playlist, playback, library)
+  const reactor = new AudioReactor(app, previewPlayer?.element ?? null)
   const prefs = loadPrefs()
   playback.setVolume(prefs.volume)
   document.documentElement.dataset.vinyl = String(prefs.vinyl)
@@ -70,6 +74,8 @@ if (root) {
   const lyrics = new LyricsPanel(app)
   const rail = new LeftRail(search.root, lyrics.root)
   const now = new NowPlaying(app)
+  const liveChip = createLiveSoundChip(reactor)
+  if (liveChip) now.tags.append(liveChip)
   const libraryMenu = new LibraryMenu(app)
   const queue = new QueuePanel(app, libraryMenu.button)
   const visualizer = new NodeVisualizer(app)
@@ -121,7 +127,10 @@ if (root) {
   root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel)
   mountOrbitCursor()
   mountToasts(document.body)
-  mountScene(now.stage, playlist, playback, (scene) => now.onCoverReveal((shown) => scene.setCoverShown(shown)))
+  mountScene(now.stage, playlist, playback, (scene) => {
+    now.onCoverReveal((shown) => scene.setCoverShown(shown))
+    scene.setAudio(() => reactor.features())
+  })
   bindShortcuts(
     app,
     {
