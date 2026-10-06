@@ -88,6 +88,14 @@ describe('PlaylistLibrary', () => {
     expect(restored.active.name).toBe('My flight plan')
   })
 
+  it('builds unique names for imports', () => {
+    expect(library.uniqueName('Road trip')).toBe('Road trip')
+    expect(library.uniqueName('my flight plan')).toBe('my flight plan 2')
+    library.create('my flight plan 2', false)
+    expect(library.uniqueName('My Flight Plan')).toBe('My Flight Plan 3')
+    expect(library.uniqueName('   ')).toBe('Playlist')
+  })
+
   it('notifies listeners', () => {
     const listener = vi.fn()
     library.subscribe(listener)

@@ -67,6 +67,16 @@ export class PlaylistLibrary {
     return taken ? `A playlist named “${taken.value.name}” already exists.` : null
   }
 
+  uniqueName(raw: string): string {
+    const base = raw.trim().replace(/\s+/g, ' ').slice(0, MAX_NAME_LENGTH - 3) || 'Playlist'
+    if (!this.validateName(base)) return base
+    for (let n = 2; n < 1000; n++) {
+      const candidate = `${base} ${n}`
+      if (!this.validateName(candidate)) return candidate
+    }
+    return `${base} ${Date.now() % 1000}`
+  }
+
   create(raw: string, switchTo = true): LibraryResult {
     const error = this.validateName(raw)
     if (error) return { ok: false, error }

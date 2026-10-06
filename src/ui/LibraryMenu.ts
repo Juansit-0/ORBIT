@@ -1,5 +1,7 @@
 import type { PlayerApp } from '../app/PlayerApp.ts'
 import { MAX_NAME_LENGTH, type LibraryEntry } from '../core/PlaylistLibrary.ts'
+import { encodePlan, exportPlan, parseImport } from '../services/planCodec.ts'
+import { showToast } from './components/toast.ts'
 import { el, setText } from './dom.ts'
 import { plural } from './format.ts'
 import { icon } from './icons.ts'
@@ -14,6 +16,7 @@ export class LibraryMenu {
   private readonly list: HTMLElement
   private readonly createInput: HTMLInputElement
   private readonly createError: HTMLElement
+  private readonly linkField: HTMLInputElement
   private renaming: string | null = null
   private confirming: string | null = null
   private confirmTimer: number | undefined
@@ -37,10 +40,30 @@ export class LibraryMenu {
       el('button', { class: 'button button--primary button--small', attrs: { type: 'submit' } }, [icon('plus'), el('span', { text: 'Create' })]),
       this.createError,
     ])
+    this.linkField = el('input', { class: 'library__input library__link', attrs: { type: 'text', readonly: true, hidden: true, 'aria-label': 'Share link' } })
+    const fileInput = el('input', { attrs: { type: 'file', accept: 'application/json,.json', hidden: true, 'aria-hidden': 'true', tabindex: -1 } })
+    const tool = (glyph: Parameters<typeof icon>[0], label: string, run: () => void) => {
+      const button = el('button', { class: 'chip library__tool', attrs: { type: 'button' } }, [icon(glyph), el('span', { text: label })])
+      button.addEventListener('click', run)
+      return button
+    }
+    const tools = el('div', { class: 'library__tools' }, [
+      tool('share', 'Share link', () => void this.share()),
+      tool('download', 'Export', () => this.exportFile()),
+      tool('upload', 'Import', () => fileInput.click()),
+      fileInput,
+      this.linkField,
+    ])
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0]
+      fileInput.value = ''
+      if (file) void this.importFile(file)
+    })
     this.panel = el('div', { class: 'library', attrs: { id: 'library', popover: 'auto', role: 'dialog', 'aria-labelledby': 'library-title' } }, [
       el('p', { class: 'library__title', text: 'Playlists', attrs: { id: 'library-title' } }),
       this.list,
       createForm,
+      tools,
     ])
     createForm.addEventListener('submit', (event) => {
       event.preventDefault()
@@ -66,6 +89,53 @@ export class LibraryMenu {
     app.library.subscribe(() => this.render())
     app.playlist.subscribe(() => this.renderButton())
     this.render()
+  }
+
+  private async share(): Promise<void> {
+    const songs = this.app.playlist.list.toArray()
+    if (songs.length === 0) {
+      showToast({ tone: 'info', title: 'Nothing to share yet', detail: 'Add songs to this playlist first.' })
+      return
+    }
+    const url = `${location.origin}${location.pathname}?plan=${encodePlan(this.app.library.active.name, songs)}`
+    try {
+      await navigator.clipboard.writeText(url)
+      this.linkField.hidden = true
+      showToast({ tone: 'success', title: 'Share link copied', detail: `Anyone who opens it gets \u201c${this.app.library.active.name}\u201d with ${songs.length} songs.` })
+    } catch {
+      this.linkField.value = url
+      this.linkField.hidden = false
+      this.linkField.focus()
+      this.linkField.select()
+      showToast({ tone: 'info', title: 'Copy the link from the playlist menu', detail: 'The browser did not allow copying it automatically.' })
+    }
+  }
+
+  private exportFile(): void {
+    const name = this.app.library.active.name
+    const blob = new Blob([exportPlan(name, this.app.playlist.list.toArray())], { type: 'application/json' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `orbit-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'playlist'}.json`
+    document.body.append(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+    showToast({ tone: 'success', title: `Exported \u201c${name}\u201d`, detail: link.download })
+  }
+
+  private async importFile(file: File): Promise<void> {
+    if (file.size > 2_000_000) {
+      showToast({ tone: 'error', title: 'That file is too large', detail: 'Orbit playlists are small JSON files.' })
+      return
+    }
+    const plan = parseImport(await file.text())
+    if (!plan) {
+      showToast({ tone: 'error', title: 'This is not an Orbit playlist', detail: 'Choose a file exported from Orbit.' })
+      return
+    }
+    this.app.importPlaylist(plan.name, plan.songs, 'file')
+    this.panel.hidePopover()
   }
 
   private setError(input: HTMLInputElement, output: HTMLElement, message: string): void {

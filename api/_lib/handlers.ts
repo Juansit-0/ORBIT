@@ -67,6 +67,27 @@ export async function searchSongs(term: string, fetcher: Fetcher = fetch): Promi
   }
 }
 
+export async function lookupSongs(rawIds: string, fetcher: Fetcher = fetch): Promise<ApiResult> {
+  const ids = rawIds.split(/[.,]/).filter((id) => /^\d{1,12}$/.test(id)).slice(0, 150)
+  if (ids.length === 0) return { status: 400, body: { error: 'missing_fields' } }
+  const url = new URL('https://itunes.apple.com/lookup')
+  url.search = new URLSearchParams({ id: ids.join(','), entity: 'song' }).toString()
+  try {
+    const response = await fetcher(url)
+    if (!response.ok) return { status: 502, body: { error: 'upstream_error' } }
+    const data = (await response.json()) as { results?: ItunesTrack[] }
+    const found = new Map<string, ApiSong>()
+    for (const track of data.results ?? []) {
+      const song = mapItunesTrack(track)
+      if (song) found.set(song.id, song)
+    }
+    const songs = ids.map((id) => found.get(id)).filter((song): song is ApiSong => Boolean(song))
+    return { status: 200, body: { songs } }
+  } catch {
+    return { status: 502, body: { error: 'upstream_error' } }
+  }
+}
+
 export function parseIsoDuration(value: string): number {
   const match = /^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(value)
   if (!match) return 0

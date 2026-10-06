@@ -219,6 +219,17 @@ export class PlayerApp {
     })
   }
 
+  importPlaylist(name: string, songs: Song[], source: 'file' | 'link'): LibraryResult {
+    const result = this.library.create(this.library.uniqueName(name))
+    if (!result.ok) return result
+    for (const song of songs) this.playlist.addLast(song)
+    this.afterLibraryChange(
+      source === 'link' ? `Opened shared playlist ${quoted(result.entry.name)}` : `Imported ${quoted(result.entry.name)}`,
+      `${songs.length} song${songs.length === 1 ? '' : 's'}.`,
+    )
+    return result
+  }
+
   switchPlaylist(id: string): LibraryResult {
     if (id === this.library.activeId) return { ok: true, entry: this.library.active }
     const result = this.library.switchTo(id)

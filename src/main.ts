@@ -19,7 +19,10 @@ import { SleepTimer } from './player/SleepTimer.ts'
 import { YouTubePlayer } from './player/YouTubePlayer.ts'
 import { resolveVideoIds } from './services/resolveService.ts'
 import { mountScene } from './scene/mountScene.ts'
+import { lookupSongs } from './services/lookupService.ts'
+import { decodePlan } from './services/planCodec.ts'
 import { loadLibrary, loadPlaylist, loadPrefs, savePrefs } from './services/storage.ts'
+import { showToast } from './ui/components/toast.ts'
 import { mountToasts } from './ui/components/toast.ts'
 import { el } from './ui/dom.ts'
 import { icon } from './ui/icons.ts'
@@ -182,6 +185,21 @@ if (root) {
   root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
   mountOrbitCursor()
   mountToasts(document.body)
+  const sharedParam = new URLSearchParams(location.search).get('plan')
+  if (sharedParam) {
+    history.replaceState(null, '', location.pathname)
+    const plan = decodePlan(sharedParam)
+    if (!plan) {
+      showToast({ tone: 'error', title: 'This share link is broken', detail: 'Ask for a new link.' })
+    } else {
+      lookupSongs(plan.ids)
+        .then((songs) => {
+          if (songs.length === 0) showToast({ tone: 'error', title: 'None of the shared songs were found' })
+          else app.importPlaylist(plan.name, songs, 'link')
+        })
+        .catch(() => showToast({ tone: 'error', title: 'The shared playlist could not be loaded', detail: 'Check your connection and open the link again.' }))
+    }
+  }
   mountScene(now.stage, playback, (scene) => {
     now.onCoverReveal((shown) => scene.setCoverShown(shown))
     scene.setAudio(() => reactor.features())

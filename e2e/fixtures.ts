@@ -1,4 +1,5 @@
 import { test as base, expect, type Locator, type Page } from '@playwright/test'
+import { demoPlaylist } from '../src/data/demoPlaylist.ts'
 
 export const searchResults = [
   {
@@ -60,6 +61,10 @@ export const test = base.extend<{ mocks: ApiMocks; orbit: OrbitPage }>({
         return route.fulfill({ status: 404, json: { error: 'not_found' } })
       }
       return route.fulfill({ json: { videoId: `vid-${title.replace(/\W+/g, '-')}` } })
+    })
+    await page.route('**/api/lookup**', async (route) => {
+      const ids = (new URL(route.request().url()).searchParams.get('ids') ?? '').split('.')
+      return route.fulfill({ json: { songs: ids.map((id) => demoPlaylist.find((song) => song.id === id)).filter(Boolean) } })
     })
     await page.route('**/api/lyrics**', async (route) => {
       const title = new URL(route.request().url()).searchParams.get('title') ?? ''
