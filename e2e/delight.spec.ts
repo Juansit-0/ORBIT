@@ -18,12 +18,25 @@ test.describe('interface details', () => {
   })
 
   test('a spark travels along the link when skipping songs', async ({ orbit }) => {
+    const { page } = orbit
+    await page.evaluate(() => {
+      const seen: string[] = []
+      Object.assign(window, { sparksSeen: seen })
+      new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (node instanceof HTMLElement && node.classList.contains('spark')) seen.push(node.className)
+          }
+        }
+      }).observe(document.querySelector('.dock') as HTMLElement, { childList: true, subtree: true })
+    })
+    const seen = () => page.evaluate(() => (window as unknown as { sparksSeen: string[] }).sparksSeen)
     await orbit.play()
     await orbit.transport('Next song').click()
-    await expect(orbit.page.locator('.dock .spark--next')).toHaveCount(1)
+    await expect.poll(seen).toContain('spark spark--next')
     await orbit.transport('Previous song').click()
-    await expect(orbit.page.locator('.dock .spark--prev')).toHaveCount(1)
-    await expect(orbit.page.locator('.dock .spark')).toHaveCount(0, { timeout: 4000 })
+    await expect.poll(seen).toContain('spark spark--prev')
+    await expect(page.locator('.dock .spark')).toHaveCount(0, { timeout: 4000 })
   })
 
   test('the orbital cursor follows the mouse and grows over controls', async ({ orbit }) => {

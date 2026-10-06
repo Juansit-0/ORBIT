@@ -4,6 +4,8 @@ import { enableDragReorder } from './dragReorder.ts'
 import { el, setText, toggleAttr } from './dom.ts'
 import { exitRow, FlipTracker, slideIn } from './motion.ts'
 import { enableDropInsert } from './dropInsert.ts'
+import { ActionSheet } from './ActionSheet.ts'
+import { isLongPress } from './gestures.ts'
 import { formatTime, plural } from './format.ts'
 import { icon } from './icons.ts'
 
@@ -32,6 +34,8 @@ export class QueuePanel {
   private readonly noMatch: HTMLElement
   private readonly rows = new Map<string, RowRefs>()
   private readonly body: HTMLElement
+  readonly sheet = new ActionSheet()
+  private suppressClick = false
   private readonly flip = new FlipTracker('nodeId')
   private suppressFlip = false
 
@@ -179,7 +183,15 @@ export class QueuePanel {
       ]),
       refs.remove,
     )
-    refs.main.addEventListener('click', () => void this.app.play(node.id))
+    refs.main.addEventListener('click', (event) => {
+      if (this.suppressClick) {
+        event.preventDefault()
+        this.suppressClick = false
+        return
+      }
+      void this.app.play(node.id)
+    })
+    this.bindLongPress(refs.row, node.id)
     refs.up.addEventListener('click', () => void this.moveBy(node.id, -1))
     refs.down.addEventListener('click', () => void this.moveBy(node.id, 1))
     refs.remove.addEventListener('click', () => this.removeRow(node.id))
@@ -218,6 +230,52 @@ export class QueuePanel {
     refs.remove.setAttribute('aria-label', `Remove ${song.title}`)
     toggleAttr(refs.up, 'disabled', index === 0)
     toggleAttr(refs.down, 'disabled', index === size - 1)
+  }
+
+  private bindLongPress(row: HTMLElement, nodeId: string): void {
+    let press: { x: number; y: number; time: number; timer: number; moved: number } | null = null
+    const cancel = () => {
+      if (press) window.clearTimeout(press.timer)
+      press = null
+      row.removeAttribute('data-pressing')
+    }
+    row.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' || (event.target as Element).closest('.waypoint__end, .waypoint__remove, .waypoint__pos')) return
+      const state = { x: event.clientX, y: event.clientY, time: performance.now(), moved: 0, timer: 0 }
+      state.timer = window.setTimeout(() => {
+        if (!press || !isLongPress(performance.now() - press.time, press.moved)) return
+        cancel()
+        this.suppressClick = true
+        navigator.vibrate?.(12)
+        this.openSheet(nodeId)
+      }, 500)
+      press = state
+      row.dataset.pressing = 'true'
+    })
+    row.addEventListener('pointermove', (event) => {
+      if (!press) return
+      press.moved = Math.max(press.moved, Math.hypot(event.clientX - press.x, event.clientY - press.y))
+      if (press.moved >= 10) cancel()
+    })
+    row.addEventListener('pointerup', cancel)
+    row.addEventListener('pointercancel', cancel)
+    row.addEventListener('contextmenu', (event) => {
+      if (window.matchMedia('(pointer: coarse)').matches) event.preventDefault()
+    })
+  }
+
+  private openSheet(nodeId: string): void {
+    const node = this.app.playlist.list.findById(nodeId)
+    if (!node) return
+    const index = this.app.playlist.list.indexOf(node)
+    const size = this.app.playlist.size
+    this.sheet.open(node.value.title, `${node.value.artist} \u00b7 position ${index + 1} of ${size}`, [
+      { label: 'Play', glyph: 'playSmall', run: () => void this.app.play(nodeId) },
+      { label: 'Play next', glyph: 'next2', disabled: node === this.app.playlist.current, run: () => void this.app.moveAfterCurrent(nodeId) },
+      { label: 'Move up', glyph: 'up', disabled: index === 0, run: () => void this.moveBy(nodeId, -1) },
+      { label: 'Move down', glyph: 'down', disabled: index === size - 1, run: () => void this.moveBy(nodeId, 1) },
+      { label: 'Remove', glyph: 'trash', danger: true, run: () => this.removeRow(nodeId) },
+    ])
   }
 
   private async moveBy(nodeId: string, delta: number): Promise<void> {

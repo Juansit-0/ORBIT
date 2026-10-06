@@ -90,6 +90,24 @@ export class PlayerApp {
     })
   }
 
+  async moveAfterCurrent(nodeId: string): Promise<void> {
+    const from = this.playlist.list.indexOfId(nodeId)
+    const current = this.playlist.indexOfCurrent()
+    if (from === -1) return
+    const title = this.playlist.list.get(from)?.title ?? 'song'
+    if (current === -1 || from === current) {
+      showToast({ tone: 'info', title: current === -1 ? 'Nothing is playing yet' : `${quoted(title)} is already playing` })
+      return
+    }
+    const to = from < current ? current : current + 1
+    if (to === from) {
+      showToast({ tone: 'info', title: `${quoted(title)} already plays next` })
+      return
+    }
+    await this.move(from, to)
+    showToast({ tone: 'success', title: `${quoted(title)} plays next`, detail: `Moved to position ${to + 1}.` })
+  }
+
   async undo(): Promise<void> {
     const command = await this.history.undo()
     if (command) showToast({ tone: 'info', title: `Undid: ${command.label}`, action: { label: 'Redo', run: () => void this.redo() } })
