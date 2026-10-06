@@ -233,6 +233,9 @@ export class OrbitScene {
         uOpacity: { value: 0 },
         uAngle: { value: 0 },
         uRound: { value: 0 },
+        uGrowTo: { value: 1.6 },
+        uCorner: { value: 0 },
+        uCameraOffset: { value: new Vector2() },
       },
     })
     this.cloud = new Points(cloudGeometry, this.cloudMaterial)
@@ -311,7 +314,20 @@ export class OrbitScene {
     }
   }
 
-  private updateCover(delta: number, lens: DOMRect | null, worldPerPixel: number): void {
+  private coverFrame(): { x: number; y: number; size: number; radius: number } | null {
+    const lens = this.anchor.querySelector<HTMLElement>('.lens')
+    if (!lens || lens.offsetWidth === 0) return null
+    const stage = this.anchor.getBoundingClientRect()
+    if (stage.width === 0) return null
+    const radius = Number.parseFloat(getComputedStyle(lens).borderTopLeftRadius) || 0
+    return { x: stage.left + stage.width / 2, y: stage.top + stage.height / 2, size: lens.offsetWidth, radius }
+  }
+
+  private updateCover(
+    delta: number,
+    lens: { x: number; y: number; size: number; radius: number } | null,
+    worldPerPixel: number,
+  ): void {
     if (this.coverDelay > 0) this.coverDelay = Math.max(0, this.coverDelay - delta)
     else if (this.coverMix < this.coverTarget) this.coverMix = Math.min(1, this.coverMix + delta / DISSOLVE_SECONDS)
     else if (this.coverMix > this.coverTarget) this.coverMix = Math.max(0, this.coverMix - delta / GATHER_SECONDS)
@@ -320,18 +336,21 @@ export class OrbitScene {
     const visible = this.coverTarget === 1 ? 1 : Math.min(1, this.coverMix * 5)
     uniforms.uOpacity!.value = this.coverReady && lens ? visible : 0
     if (!lens) return
-    const half = (lens.width / 2) * worldPerPixel * 0.96
+    const half = (lens.size / 2) * worldPerPixel
     uniforms.uHalf!.value = half
     uniforms.uScale!.value = this.points.scale.x
-    uniforms.uGridSize!.value = (lens.width / COVER_GRID) * 1.5
+    uniforms.uGrowTo!.value = Math.max(1, (this.points.scale.x * 0.9) / half)
+    uniforms.uGridSize!.value = (lens.size / COVER_GRID) * 1.5
+    uniforms.uCorner!.value = Math.min(1, (lens.radius * 2) / lens.size)
+    ;(uniforms.uCameraOffset!.value as Vector2).set(this.camera.position.x, this.camera.position.y)
     const cover = this.anchor.querySelector<HTMLElement>('.lens__cover')
     const vinyl = document.documentElement.dataset.vinyl === 'true'
     uniforms.uRound!.value = vinyl ? 1 : 0
     uniforms.uAngle!.value = vinyl && cover ? coverAngle(cover) : 0
     uniforms.uSphereSize!.value = 2.2
     ;(uniforms.uCenter!.value as Vector3).set(
-      (lens.left + lens.width / 2 - window.innerWidth / 2) * worldPerPixel,
-      -(lens.top + lens.height / 2 - window.innerHeight / 2) * worldPerPixel,
+      (lens.x - window.innerWidth / 2) * worldPerPixel,
+      -(lens.y - window.innerHeight / 2) * worldPerPixel,
       0,
     )
   }
@@ -458,8 +477,7 @@ export class OrbitScene {
     uniforms.uShock!.value = this.shock
     uniforms.uIntro!.value = this.intro
     this.points.updateMatrixWorld()
-    const lens = this.anchor.querySelector('.lens')?.getBoundingClientRect() ?? null
-    this.updateCover(delta, lens && lens.width > 0 ? lens : null, (2 * CAMERA_DISTANCE * Math.tan((FOV * Math.PI) / 360)) / window.innerHeight)
+    this.updateCover(delta, this.coverFrame(), (2 * CAMERA_DISTANCE * Math.tan((FOV * Math.PI) / 360)) / window.innerHeight)
     this.renderer.render(this.scene, this.camera)
   }
 }

@@ -737,26 +737,23 @@
 
 .lens {
   transition:
-    opacity 1100ms var(--ease-in-out) 0ms,
-    filter 1100ms var(--ease-in-out) 0ms,
-    transform 1300ms var(--ease-out) 0ms,
-    box-shadow 900ms var(--ease-out);
+    opacity 1000ms var(--ease-in-out) 0ms,
+    filter 1000ms var(--ease-in-out) 0ms,
+    box-shadow 700ms var(--ease-out);
 }
 
 .lens[data-cover='hidden'] {
   opacity: 0;
-  filter: blur(14px) saturate(1.4);
-  transform: scale(1.1);
+  filter: blur(3px);
   box-shadow: none;
   pointer-events: none;
 }
 
 .lens[data-cover='shown'] {
   transition:
-    opacity 900ms var(--ease-out) 1050ms,
-    filter 900ms var(--ease-out) 1050ms,
-    transform 1200ms var(--ease-out) 900ms,
-    box-shadow 900ms var(--ease-out) 1050ms;
+    opacity 800ms var(--ease-out) 1450ms,
+    filter 800ms var(--ease-out) 1450ms,
+    box-shadow 800ms var(--ease-out) 1450ms;
 }
 
 html:not(.has-scene) .lens[data-cover='shown'] {
