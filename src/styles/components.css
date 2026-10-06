@@ -2737,3 +2737,26 @@ html:not(.has-scene) .lens[data-cover='shown'] {
     --lyrics-height: clamp(8rem, 24svh, 12rem);
   }
 }
+
+.finder__section {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.finder__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2) 0;
+}
+
+.finder__section-title {
+  margin: 0;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

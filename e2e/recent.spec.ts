@@ -1,0 +1,37 @@
+import { expect, test } from './fixtures.ts'
+
+test.describe('recently played', () => {
+  test('lists songs played for ten seconds, survives a reload and can be cleared', async ({ page, orbit }) => {
+    await page.locator('#search-input').focus()
+    await expect(page.getByText('Find any song')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await page.locator('body').click({ position: { x: 5, y: 5 } })
+    await orbit.play()
+    await expect(page.locator('.results--recent')).toHaveCount(0)
+    await page.keyboard.press('Shift+ArrowRight')
+    await page.locator('#search-input').focus()
+    const recent = page.locator('.results--recent .result__title')
+    await expect(recent).toHaveText(['Get Lucky'])
+    await page.reload()
+    await page.locator('#search-input').focus()
+    await expect(recent).toHaveText(['Get Lucky'])
+    await page.getByRole('button', { name: 'Clear recently played' }).click()
+    await expect(page.getByText('Find any song')).toBeVisible()
+  })
+
+  test('replays a recent song and offers songs outside the plan in the palette', async ({ page, orbit }) => {
+    await orbit.search('radiohead')
+    await orbit.result('Karma Police').getByRole('button', { name: /Play Karma Police by Radiohead now/ }).click()
+    await page.locator('body').click({ position: { x: 5, y: 5 } })
+    await expect.poll(() => orbit.currentTitle()).toBe('Karma Police')
+    await page.keyboard.press('Shift+ArrowRight')
+    await page.keyboard.press('Shift+ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await expect.poll(() => orbit.currentTitle()).not.toBe('Karma Police')
+    await page.keyboard.press('Control+k')
+    await page.locator('.palette__input').fill('karma')
+    await expect(page.locator('.palette__group', { hasText: 'Recently played' })).toBeVisible()
+    await page.keyboard.press('Enter')
+    await expect.poll(() => orbit.currentTitle()).toBe('Karma Police')
+  })
+})

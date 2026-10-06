@@ -33,6 +33,7 @@ The linked list dock in the interface draws the live structure: `null`, `HEAD`, 
 - Radio of similar songs when the flight plan ends, share links, export and import
 - Interactive particle planet that reacts to the music: cursor trail, click shockwave, cover that dissolves into the planet and colours taken from the cover
 - Smooth volume transitions
+- Recently played: songs heard for 10 seconds or more appear when the search is empty and in the command palette
 
 ## Run it
 

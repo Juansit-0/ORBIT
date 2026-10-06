@@ -11,7 +11,7 @@ interface Command {
   keywords?: string
   hint?: string
   glyph: IconName
-  group: 'Actions' | 'Flight plan' | 'Search'
+  group: 'Actions' | 'Flight plan' | 'Recently played' | 'Search'
   cover?: string
   run: (event: KeyboardEvent | MouseEvent | null) => void
 }
@@ -23,6 +23,7 @@ export interface PaletteActions {
   focusSearch: () => void
   toggleList: () => void
   listShown: () => boolean
+  recent: () => Song[]
 }
 
 export class CommandPalette {
@@ -137,6 +138,22 @@ export class CommandPalette {
         run: () => void app.play(node.id),
       })
     })
+    const inPlan = new Set(playlist.list.nodes().map((node) => node.value.id))
+    for (const song of this.actions.recent().filter((entry) => !inPlan.has(entry.id)).slice(0, 12)) {
+      list.push({
+        id: `recent-${song.id}`,
+        label: song.title,
+        keywords: `${song.artist} ${song.album}`,
+        hint: 'Play now',
+        glyph: 'playSmall',
+        group: 'Recently played',
+        cover: song.artworkUrl,
+        run: (event) => {
+          if (event && event.shiftKey) void this.app.addLast(song)
+          else void this.app.playNow(song)
+        },
+      })
+    }
     return list
   }
 
