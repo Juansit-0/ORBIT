@@ -23,7 +23,7 @@ export class SettingsMenu {
       el('label', { class: 'switch', attrs: { for: 'setting-vinyl' } }, [
         el('span', { class: 'switch__text' }, [
           el('span', { class: 'switch__label', text: 'Spin the cover like a vinyl' }),
-          el('span', { class: 'switch__hint', text: 'The cover turns while a preview plays. Full tracks keep the video still.' }),
+          el('span', { class: 'switch__hint', text: 'The cover turns into a spinning record while music plays, and its particles spin with it.' }),
         ]),
         vinyl,
         el('span', { class: 'switch__track', attrs: { 'aria-hidden': 'true' } }),

@@ -26,10 +26,12 @@ import { profileFor, pulseAt, type PulseProfile } from './pulse.ts'
 const TRAIL_LENGTH = 12
 const FOV = 35
 const CAMERA_DISTANCE = 6
-const COVER_GRID = 72
-const DISSOLVE_SECONDS = 1.5
-const GATHER_SECONDS = 0.75
-const DISSOLVE_DELAY = 0.3
+const COVER_GRID = 84
+const DISSOLVE_SECONDS = 2.8
+const GATHER_SECONDS = 1.6
+const DISSOLVE_DELAY = 0.55
+const PALETTE_SIZE = 5
+const PALETTE_MIX = 0.94
 const INTERACTIVE = 'button, input, a, label, [role="tab"], [popover], .rail, .dock, .mast, .tabs, .toast, .lens, .deck__meta, .deck__controls'
 
 export interface SceneOptions {
@@ -44,6 +46,17 @@ export interface PlaybackInput {
   trackKey: string | null
   positionMs: number
   artworkUrl: string | null
+}
+
+function vinylCorner(lens: { size: number; radius: number }): number {
+  return Math.min(1, (lens.radius * 2) / Math.max(1, lens.size))
+}
+
+function coverAngle(element: HTMLElement): number {
+  const transform = getComputedStyle(element).transform
+  const match = /matrix\(([^,]+),\s*([^,]+)/.exec(transform)
+  if (!match) return 0
+  return Math.atan2(Number(match[2]), Number(match[1]))
 }
 
 function fibonacciSphere(count: number): Float32Array {
@@ -108,6 +121,10 @@ export class OrbitScene {
   private coverTarget = 0
   private coverDelay = 0
   private coverReady = false
+  private readonly palette: Color[] = []
+  private readonly paletteTarget: Color[] = []
+  private paletteMix = 0
+  private paletteMixTarget = 0
   private intro = 1
   private click = new Vector4(0, 0, 0, 1)
   private readonly baseChart: Color
@@ -148,6 +165,10 @@ export class OrbitScene {
     const token = (name: string, fallback: string) => new Color(css.getPropertyValue(name).trim() || fallback)
     this.baseChart = token('--chart-soft', '#5ba8e0')
     this.baseKey = new Color('#ffb27a')
+    for (let i = 0; i < PALETTE_SIZE; i++) {
+      this.palette.push(this.baseChart.clone())
+      this.paletteTarget.push(this.baseChart.clone())
+    }
     this.targetChart = this.baseChart.clone()
     this.targetKey = this.baseKey.clone()
     this.material = new ShaderMaterial({
@@ -172,6 +193,8 @@ export class OrbitScene {
         uChart: { value: this.baseChart.clone() },
         uBurn: { value: token('--burn', '#ff7a1a') },
         uKey: { value: this.baseKey.clone() },
+        uPalette: { value: this.palette },
+        uPaletteMix: { value: 0 },
       },
     })
     this.points = new Points(geometry, this.material)
@@ -212,6 +235,13 @@ export class OrbitScene {
         uCenter: { value: new Vector3() },
         uSphereMatrix: { value: this.points.matrixWorld },
         uOpacity: { value: 0 },
+        uAngle: { value: 0 },
+        uRound: { value: 0 },
+        uGrowTo: { value: 1.6 },
+        uCorner: { value: 0 },
+        uPaper: { value: token('--paper', '#f7fafc') },
+        uInk: { value: token('--ink', '#10324a') },
+        uCameraOffset: { value: new Vector2() },
       },
     })
     this.cloud = new Points(cloudGeometry, this.cloudMaterial)
@@ -261,6 +291,7 @@ export class OrbitScene {
       this.targetChart.copy(this.baseChart)
       this.targetKey.copy(this.baseKey)
       this.coverReady = false
+      this.paletteMixTarget = 0
       if (transition) this.shock = 0
       return
     }
@@ -272,7 +303,9 @@ export class OrbitScene {
       const key = blend([this.baseKey.r, this.baseKey.g, this.baseKey.b], vivid, 0.4, 0.85)
       this.targetChart.setRGB(...chart)
       this.targetKey.setRGB(...key)
-      const targets = buildTargets(COVER_GRID * COVER_GRID, sample)
+      sample.swatches.forEach((swatch, index) => this.paletteTarget[index]?.setRGB(...swatch))
+      this.paletteMixTarget = PALETTE_MIX
+      const targets = buildTargets(COVER_GRID * COVER_GRID, sample, 0.12)
       const geometry = this.cloud.geometry
       const grid = geometry.getAttribute('aGrid') as BufferAttribute
       const color = geometry.getAttribute('aColor') as BufferAttribute
@@ -287,7 +320,21 @@ export class OrbitScene {
     }
   }
 
-  private updateCover(delta: number, lens: DOMRect | null, worldPerPixel: number): void {
+  private coverFrame(): { x: number; y: number; size: number; radius: number } | null {
+    const lens = this.anchor.querySelector<HTMLElement>('.lens')
+    if (!lens || lens.offsetWidth === 0) return null
+    const stage = this.anchor.getBoundingClientRect()
+    if (stage.width === 0) return null
+    const raw = getComputedStyle(lens).borderTopLeftRadius
+    const radius = raw.endsWith('%') ? (Number.parseFloat(raw) / 100) * lens.offsetWidth : Number.parseFloat(raw) || 0
+    return { x: stage.left + stage.width / 2, y: stage.top + stage.height / 2, size: lens.offsetWidth, radius }
+  }
+
+  private updateCover(
+    delta: number,
+    lens: { x: number; y: number; size: number; radius: number } | null,
+    worldPerPixel: number,
+  ): void {
     if (this.coverDelay > 0) this.coverDelay = Math.max(0, this.coverDelay - delta)
     else if (this.coverMix < this.coverTarget) this.coverMix = Math.min(1, this.coverMix + delta / DISSOLVE_SECONDS)
     else if (this.coverMix > this.coverTarget) this.coverMix = Math.max(0, this.coverMix - delta / GATHER_SECONDS)
@@ -296,14 +343,21 @@ export class OrbitScene {
     const visible = this.coverTarget === 1 ? 1 : Math.min(1, this.coverMix * 5)
     uniforms.uOpacity!.value = this.coverReady && lens ? visible : 0
     if (!lens) return
-    const half = (lens.width / 2) * worldPerPixel * 0.96
+    const half = (lens.size / 2) * worldPerPixel
     uniforms.uHalf!.value = half
     uniforms.uScale!.value = this.points.scale.x
-    uniforms.uGridSize!.value = (lens.width / COVER_GRID) * 1.45
+    uniforms.uGrowTo!.value = Math.max(1, (this.points.scale.x * 0.9) / half)
+    uniforms.uGridSize!.value = (lens.size / COVER_GRID) * 1.5
+    uniforms.uCorner!.value = vinylCorner(lens)
+    ;(uniforms.uCameraOffset!.value as Vector2).set(this.camera.position.x, this.camera.position.y)
+    const cover = this.anchor.querySelector<HTMLElement>('.lens__cover')
+    const vinyl = document.documentElement.dataset.vinyl === 'true'
+    uniforms.uRound!.value = vinyl ? 1 : 0
+    uniforms.uAngle!.value = vinyl && cover ? coverAngle(cover) : 0
     uniforms.uSphereSize!.value = 2.2
     ;(uniforms.uCenter!.value as Vector3).set(
-      (lens.left + lens.width / 2 - window.innerWidth / 2) * worldPerPixel,
-      -(lens.top + lens.height / 2 - window.innerHeight / 2) * worldPerPixel,
+      (lens.x - window.innerWidth / 2) * worldPerPixel,
+      -(lens.y - window.innerHeight / 2) * worldPerPixel,
       0,
     )
   }
@@ -411,6 +465,10 @@ export class OrbitScene {
     const tint = Math.min(1, delta * 1.5)
     ;(this.material.uniforms.uChart!.value as Color).lerp(this.targetChart, tint)
     ;(this.material.uniforms.uKey!.value as Color).lerp(this.targetKey, tint)
+    const swatchTint = Math.min(1, delta * 0.9)
+    this.palette.forEach((color, index) => color.lerp(this.paletteTarget[index] as Color, swatchTint))
+    this.paletteMix += (this.paletteMixTarget - this.paletteMix) * swatchTint
+    this.material.uniforms.uPaletteMix!.value = this.paletteMix
     this.updateTrail()
     this.parallax.x += (Math.max(-1, Math.min(1, this.pointer.x)) * 0.12 - this.parallax.x) * Math.min(1, delta * 2)
     this.parallax.y += (Math.max(-1, Math.min(1, this.pointer.y)) * 0.08 - this.parallax.y) * Math.min(1, delta * 2)
@@ -426,8 +484,7 @@ export class OrbitScene {
     uniforms.uShock!.value = this.shock
     uniforms.uIntro!.value = this.intro
     this.points.updateMatrixWorld()
-    const lens = this.anchor.querySelector('.lens')?.getBoundingClientRect() ?? null
-    this.updateCover(delta, lens && lens.width > 0 ? lens : null, (2 * CAMERA_DISTANCE * Math.tan((FOV * Math.PI) / 360)) / window.innerHeight)
+    this.updateCover(delta, this.coverFrame(), (2 * CAMERA_DISTANCE * Math.tan((FOV * Math.PI) / 360)) / window.innerHeight)
     this.renderer.render(this.scene, this.camera)
   }
 }

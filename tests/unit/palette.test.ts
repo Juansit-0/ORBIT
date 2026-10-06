@@ -57,3 +57,49 @@ describe('buildTargets', () => {
     expect(positions[1]).toBeGreaterThan(0)
   })
 })
+
+import { paletteColors, readable } from '../../src/scene/palette.ts'
+
+describe('paletteColors', () => {
+  it('returns distinct hues ordered by presence', () => {
+    const data = pixels([
+      ...Array.from({ length: 20 }, () => [220, 40, 30] as [number, number, number]),
+      ...Array.from({ length: 10 }, () => [30, 90, 210] as [number, number, number]),
+      ...Array.from({ length: 5 }, () => [40, 180, 70] as [number, number, number]),
+    ])
+    const colors = paletteColors(data, 3)
+    expect(colors).toHaveLength(3)
+    expect(colors[0]![0]).toBeGreaterThan(colors[0]![2])
+    expect(colors[1]![2]).toBeGreaterThan(colors[1]![0])
+    expect(colors[2]![1]).toBeGreaterThan(colors[2]![0])
+  })
+
+  it('always fills the requested count, even for greyscale covers', () => {
+    expect(paletteColors(pixels([[128, 128, 128]], 20), 5)).toHaveLength(5)
+  })
+
+  it('keeps colours readable on the light ground', () => {
+    for (const color of paletteColors(pixels([[255, 250, 200], [250, 255, 220]], 10), 5)) {
+      expect(0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2]).toBeLessThanOrEqual(0.5501)
+    }
+  })
+})
+
+describe('readable', () => {
+  it('lifts near black and darkens near white', () => {
+    expect(readable([0, 0, 0])[0]).toBeGreaterThan(0)
+    const light = readable([1, 1, 1])
+    expect(0.2126 * light[0] + 0.7152 * light[1] + 0.0722 * light[2]).toBeCloseTo(0.55, 5)
+  })
+})
+
+import { vivify } from '../../src/scene/palette.ts'
+
+describe('vivify', () => {
+  it('raises saturation and leaves greys alone', () => {
+    const muted: [number, number, number] = [0.5, 0.4, 0.35]
+    const vivid = vivify(muted)
+    expect(Math.max(...vivid) - Math.min(...vivid)).toBeGreaterThan(Math.max(...muted) - Math.min(...muted))
+    expect(vivify([0.5, 0.5, 0.5])).toEqual([0.5, 0.5, 0.5])
+  })
+})

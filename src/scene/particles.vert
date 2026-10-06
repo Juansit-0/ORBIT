@@ -9,6 +9,7 @@ uniform float uSize;
 uniform float uScale;
 uniform vec4 uTrail[TRAIL_LENGTH];
 uniform vec3 uKeyDir;
+uniform vec3 uPalette[5];
 
 attribute vec4 aSeed;
 attribute float aRing;
@@ -19,6 +20,7 @@ varying float vHeat;
 varying float vFacing;
 varying float vSeed;
 varying float vRing;
+varying vec3 vPalette;
 
 void main() {
   vec3 n = normalize(position);
@@ -67,6 +69,13 @@ void main() {
   vHeat = heat;
   vSeed = aSeed.w;
   vRing = aRing;
+  int swatch = int(floor(fract(aSeed.z * 7.13 + aSeed.w * 3.7) * 4.999));
+  vec3 picked = uPalette[0];
+  if (swatch == 1) picked = uPalette[1];
+  else if (swatch == 2) picked = uPalette[2];
+  else if (swatch == 3) picked = uPalette[3];
+  else if (swatch == 4) picked = uPalette[4];
+  vPalette = picked;
 
   vec4 mvPosition = viewMatrix * world;
   gl_Position = projectionMatrix * mvPosition;

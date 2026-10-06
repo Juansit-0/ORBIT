@@ -17,6 +17,7 @@ test.describe('video monitor', () => {
     await orbit.search('radiohead')
     await orbit.result('Karma Police').getByRole('button', { name: /at the start/ }).click()
     await orbit.row('Karma Police').locator('.waypoint__main').click()
+    await expect(orbit.page.locator('.badge')).toHaveText('Full track')
     await orbit.page.evaluate(() => window.orbitFakePlayer?.fail())
     await expect(orbit.page.locator('.badge')).toHaveText('30 s preview')
     await expect(orbit.page.locator('.monitor')).toBeHidden()

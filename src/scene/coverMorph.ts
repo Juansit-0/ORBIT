@@ -1,9 +1,10 @@
-import { dominantColors, type CoverPalette } from './palette.ts'
+import { dominantColors, paletteColors, type CoverPalette, type Rgb } from './palette.ts'
 
 export interface CoverSample {
   grid: number
   colors: Float32Array
   palette: CoverPalette
+  swatches: Rgb[]
 }
 
 export interface MorphTargets {
@@ -11,7 +12,11 @@ export interface MorphTargets {
   colors: Float32Array
 }
 
-export function buildTargets(count: number, sample: { grid: number; colors: ArrayLike<number> }): MorphTargets {
+export function buildTargets(
+  count: number,
+  sample: { grid: number; colors: ArrayLike<number> },
+  jitter = 0.5,
+): MorphTargets {
   const positions = new Float32Array(count * 2)
   const colors = new Float32Array(count * 3)
   const { grid } = sample
@@ -21,9 +26,10 @@ export function buildTargets(count: number, sample: { grid: number; colors: Arra
     const cell = Math.floor((i * cells) / Math.max(1, count)) % cells
     const x = cell % grid
     const y = Math.floor(cell / grid)
-    const jitter = ((i * 7919) % 97) / 97
-    positions[i * 2] = -1 + (x + 0.25 + jitter * 0.5) * step
-    positions[i * 2 + 1] = 1 - (y + 0.25 + (1 - jitter) * 0.5) * step
+    const jx = (((i * 7919) % 97) / 97 - 0.5) * jitter
+    const jy = (((i * 104729) % 89) / 89 - 0.5) * jitter
+    positions[i * 2] = -1 + (x + 0.5 + jx) * step
+    positions[i * 2 + 1] = 1 - (y + 0.5 + jy) * step
     colors[i * 3] = sample.colors[cell * 3] ?? 0
     colors[i * 3 + 1] = sample.colors[cell * 3 + 1] ?? 0
     colors[i * 3 + 2] = sample.colors[cell * 3 + 2] ?? 0
@@ -51,7 +57,7 @@ export function sampleCover(url: string, grid = 96): Promise<CoverSample> {
           colors[i * 3 + 1] = (data[i * 4 + 1] ?? 0) / 255
           colors[i * 3 + 2] = (data[i * 4 + 2] ?? 0) / 255
         }
-        resolve({ grid, colors, palette: dominantColors(data) })
+        resolve({ grid, colors, palette: dominantColors(data), swatches: paletteColors(data, 5) })
       } catch (error) {
         reject(error instanceof Error ? error : new Error('Cover could not be read'))
       }
