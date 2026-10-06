@@ -1,4 +1,5 @@
 import type { PlaylistSnapshot } from '../core/Playlist.ts'
+import type { LibraryState } from '../core/PlaylistLibrary.ts'
 
 const PLAYLIST_KEY = 'orbit:v1:playlist'
 
@@ -60,4 +61,19 @@ export function loadPrefs(): Prefs {
 
 export function savePrefs(prefs: Prefs): void {
   writeJson(PREFS_KEY, prefs)
+}
+
+const LIBRARY_KEY = 'orbit:v1:library'
+
+export function loadLibrary(): LibraryState | null {
+  const value = readJson<Partial<LibraryState>>(LIBRARY_KEY)
+  if (!value || typeof value.activeId !== 'string' || !Array.isArray(value.entries)) return null
+  const entries = value.entries.filter(
+    (entry) => typeof entry?.id === 'string' && typeof entry?.name === 'string' && isSnapshot(entry.snapshot),
+  )
+  return entries.length > 0 ? { activeId: value.activeId, entries } : null
+}
+
+export function saveLibrary(state: LibraryState): void {
+  writeJson(LIBRARY_KEY, state)
 }

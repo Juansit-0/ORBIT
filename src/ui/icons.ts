@@ -28,6 +28,8 @@ const PATHS = {
   redo: `<path ${STROKE} d="m15 14.5 4.5-4.5L15 5.5M19.5 10h-10a5 5 0 0 0 0 10H13"/>`,
   lyrics: `<path ${STROKE} d="M4 6h12M4 10h16M4 14h9M4 18h12M18 14.5v5.2M18 19.7a1.8 1.8 0 1 1-1.8-1.8H18"/>`,
   moon: `<path ${STROKE} d="M19.5 14.6A8 8 0 0 1 9.4 4.5a8 8 0 1 0 10.1 10.1Z"/>`,
+  pencil: `<path ${STROKE} d="M4.5 19.5h4l10-10a2.8 2.8 0 0 0-4-4l-10 10v4ZM13.5 6.5l4 4"/>`,
+  plus: `<path ${STROKE} d="M12 5v14M5 12h14"/>`,
   music: `<path ${STROKE} d="M9 18.5V6.2l10-2v12.3M9 18.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM19 16.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM9 10l10-2"/>`,
 } as const
 
