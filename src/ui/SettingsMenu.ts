@@ -10,6 +10,8 @@ export interface SettingsOptions {
   onCinemaFullscreen: (enabled: boolean) => void
   explain: boolean
   onExplain: (enabled: boolean) => void
+  showList: boolean
+  onShowList: (enabled: boolean) => void
   radio: boolean
   onRadio: (enabled: boolean) => void
   smoothVolume: boolean
@@ -23,7 +25,7 @@ const DELAYS: { label: string; value: number | null }[] = [
   { label: 'Never', value: null },
 ]
 
-function toggle(id: string, label: string, hint: string, checked: boolean, onChange: (value: boolean) => void): HTMLElement {
+function toggle(id: string, label: string, hint: string, checked: boolean, onChange: (value: boolean) => void): HTMLLabelElement {
   const input = el('input', { class: 'switch__input', attrs: { type: 'checkbox', role: 'switch', id } })
   input.checked = checked
   input.addEventListener('change', () => onChange(input.checked))
@@ -37,6 +39,8 @@ function toggle(id: string, label: string, hint: string, checked: boolean, onCha
 export class SettingsMenu {
   readonly button: HTMLButtonElement
   readonly panel: HTMLElement
+  private readonly listSwitch: HTMLInputElement
+  private readonly nested: HTMLElement
 
   constructor(options: SettingsOptions) {
     this.button = el('button', {
@@ -63,7 +67,27 @@ export class SettingsMenu {
       toggle('setting-vinyl', 'Spin the cover like a vinyl', 'The cover turns into a spinning record while music plays, and its particles spin with it.', options.vinyl, options.onVinyl),
       toggle('setting-smooth', 'Smooth volume transitions', 'Fade the music out and in when you pause, resume or change songs.', options.smoothVolume, options.onSmoothVolume),
       toggle('setting-radio', 'Offer radio at the end', 'When the flight plan ends, offer to keep playing similar songs without adding them.', options.radio, options.onRadio),
-      toggle('setting-explain', 'Explain list operations', 'Plays each pointer change step by step in the linked list dock when you add, remove or move a song.', options.explain, options.onExplain),
+      (this.nested = el('div', { class: 'settings__list' }, [
+        toggle('setting-list', 'Show linked list', 'The panel under the player with HEAD, TAIL, every node and its next and prev pointers. Press V any time.', options.showList, (value) => {
+          this.syncList(value)
+          options.onShowList(value)
+        }),
+        el('div', { class: 'settings__nested' }, [
+          toggle('setting-explain', 'Explain list operations', 'Plays each pointer change step by step in the linked list panel when you add, remove or move a song.', options.explain, options.onExplain),
+        ]),
+      ])),
     ])
+    this.listSwitch = this.panel.querySelector<HTMLInputElement>('#setting-list') as HTMLInputElement
+    this.syncList(options.showList)
+  }
+
+  setShowList(value: boolean): void {
+    this.listSwitch.checked = value
+    this.syncList(value)
+  }
+
+  private syncList(value: boolean): void {
+    const nested = this.nested.querySelector<HTMLElement>('.settings__nested')
+    if (nested) nested.hidden = !value
   }
 }

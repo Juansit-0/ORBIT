@@ -45,9 +45,17 @@ export interface ApiMocks {
   resolve: 'ok' | 'quota' | 'not_found'
 }
 
-export const test = base.extend<{ mocks: ApiMocks; orbit: OrbitPage }>({
+export const test = base.extend<{ mocks: ApiMocks; listShown: boolean; orbit: OrbitPage }>({
   mocks: [{ resolve: 'ok' }, { option: true }],
-  orbit: async ({ page, mocks }, use) => {
+  listShown: [true, { option: true }],
+  orbit: async ({ page, mocks, listShown }, use) => {
+    if (listShown) {
+      await page.addInitScript(() => {
+        const key = 'orbit:v1:prefs'
+        const prefs = JSON.parse(localStorage.getItem(key) ?? '{}') as Record<string, unknown>
+        if (prefs.showList === undefined) localStorage.setItem(key, JSON.stringify({ ...prefs, showList: true }))
+      })
+    }
     await page.route('**/api/search**', async (route) => {
       const term = new URL(route.request().url()).searchParams.get('term') ?? ''
       if (term.includes('fail')) return route.fulfill({ status: 502, json: { error: 'upstream_error' } })

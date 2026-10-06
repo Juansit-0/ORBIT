@@ -452,3 +452,7 @@ kbd {
     opacity: 0.45;
   }
 }
+
+[data-list='hidden'] .dock {
+  display: none;
+}

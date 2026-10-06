@@ -2554,3 +2554,14 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   font-family: var(--font-mono);
   font-size: 0.75rem;
 }
+
+.settings__list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.settings__nested {
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--rule-strong);
+}

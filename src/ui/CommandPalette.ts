@@ -21,6 +21,8 @@ export interface PaletteActions {
   toggleLyrics: () => void
   setSleep: (minutes: number | 'end' | null) => void
   focusSearch: () => void
+  toggleList: () => void
+  listShown: () => boolean
 }
 
 export class CommandPalette {
@@ -110,6 +112,7 @@ export class CommandPalette {
       { id: 'undo', label: 'Undo', keywords: app.history.undoLabel ?? '', glyph: 'undo', group: 'Actions', hint: 'Ctrl Z', run: () => void app.undo() },
       { id: 'redo', label: 'Redo', keywords: app.history.redoLabel ?? '', glyph: 'redo', group: 'Actions', run: () => void app.redo() },
       { id: 'cinema', label: 'Player mode', keywords: 'cinema focus fullscreen planet', glyph: 'cinema', group: 'Actions', hint: 'O', run: () => this.actions.toggleCinema() },
+      { id: 'list', label: this.actions.listShown() ? 'Hide linked list' : 'Show linked list', keywords: 'visualizer nodes pointers head tail explain', glyph: 'orbit', group: 'Actions', hint: 'V', run: () => this.actions.toggleList() },
       { id: 'lyrics', label: 'Show lyrics', keywords: 'karaoke words', glyph: 'lyrics', group: 'Actions', hint: 'L', run: () => this.actions.toggleLyrics() },
       { id: 'search', label: 'Search songs', keywords: 'find catalog', glyph: 'search', group: 'Actions', hint: '/', run: () => this.actions.focusSearch() },
       { id: 'sleep-15', label: 'Sleep timer 15 minutes', keywords: 'stop timer', glyph: 'moon', group: 'Actions', run: () => this.actions.setSleep(15) },

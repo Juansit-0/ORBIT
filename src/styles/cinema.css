@@ -195,3 +195,9 @@
     translate: none;
   }
 }
+
+.settings:popover-open {
+  max-height: calc(100svh - 88px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
