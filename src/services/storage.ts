@@ -49,15 +49,21 @@ export function savePlaylist(snapshot: PlaylistSnapshot): void {
 
 const PREFS_KEY = 'orbit:v1:prefs'
 
+export const CINEMA_DELAYS = [10000, 20000, 45000] as const
+
 export interface Prefs {
   volume: number
   vinyl: boolean
+  cinemaDelay: number | null
+  cinemaFullscreen: boolean
 }
 
 export function loadPrefs(): Prefs {
   const value = readJson<Partial<Prefs>>(PREFS_KEY)
   const volume = typeof value?.volume === 'number' && value.volume >= 0 && value.volume <= 100 ? value.volume : 80
-  return { volume, vinyl: value?.vinyl === true }
+  const delay = value?.cinemaDelay
+  const cinemaDelay = delay === null ? null : CINEMA_DELAYS.includes(delay as (typeof CINEMA_DELAYS)[number]) ? (delay as number) : 20000
+  return { volume, vinyl: value?.vinyl === true, cinemaDelay, cinemaFullscreen: value?.cinemaFullscreen === true }
 }
 
 export function savePrefs(patch: Partial<Prefs>): void {

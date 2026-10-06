@@ -31,6 +31,7 @@ export class NowPlaying {
   readonly lyricsButton: HTMLButtonElement
   readonly tags: HTMLElement
   private readonly planTag: HTMLButtonElement
+  private readonly karaoke: HTMLElement
   private readonly scale = el('div', { class: 'seek-scale', attrs: { 'aria-hidden': 'true' } })
   private readonly liquid = new LiquidProgress()
   private seeking = false
@@ -55,6 +56,7 @@ export class NowPlaying {
     this.elapsed = el('span', { class: 'clock__elapsed', text: '0:00' })
     this.total = el('span', { class: 'clock__total', text: '0:00' })
     this.title = el('h1', { class: 'deck__title', text: 'Orbit' })
+    this.karaoke = el('p', { class: 'deck__karaoke', attrs: { 'aria-hidden': 'true' } })
     this.artist = el('p', { class: 'deck__artist', text: 'Add a song to launch the flight plan.' })
     this.source = el('p', { class: 'badge', attrs: { hidden: true } })
     this.planTag = el('button', {
@@ -96,6 +98,7 @@ export class NowPlaying {
         ]),
         this.title,
         this.artist,
+        this.karaoke,
         (this.tags = el('div', { class: 'deck__tags' }, [this.source, this.planTag, this.lyricsButton])),
       ]),
       el('div', { class: 'deck__controls' }, [
@@ -107,7 +110,7 @@ export class NowPlaying {
     this.bind()
     for (const button of [this.playButton, this.prevButton, this.nextButton]) magnetize(button, button === this.playButton ? 7 : 5)
     this.stage.addEventListener('pointerenter', (event) => {
-      if (event.pointerType !== 'mouse') return
+      if (event.pointerType !== 'mouse' || document.documentElement.dataset.cinema === 'true') return
       window.clearTimeout(this.leaveTimer)
       this.setHovering(true)
     })
@@ -132,9 +135,21 @@ export class NowPlaying {
     this.evaluateReveal()
   }
 
+  setKaraoke(text: string | null): void {
+    if (this.karaoke.textContent === (text ?? '')) return
+    this.karaoke.dataset.empty = String(!text)
+    this.karaoke.textContent = text ?? ''
+    if (text) this.karaoke.animate?.([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' })
+  }
+
   lensRect(): DOMRect | null {
     const rect = this.lens.getBoundingClientRect()
     return rect.width > 0 ? rect : null
+  }
+
+  resetHover(): void {
+    window.clearTimeout(this.leaveTimer)
+    this.setHovering(false)
   }
 
   private setHovering(hovering: boolean): void {

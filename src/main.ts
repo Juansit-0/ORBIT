@@ -3,6 +3,7 @@ import './styles/base.css'
 import './styles/layout.css'
 import './styles/components.css'
 import './styles/dock.css'
+import './styles/cinema.css'
 import { PlayerApp } from './app/PlayerApp.ts'
 import { AudioReactor } from './audio/AudioReactor.ts'
 import { Playlist } from './core/Playlist.ts'
@@ -20,6 +21,7 @@ import { mountScene } from './scene/mountScene.ts'
 import { loadLibrary, loadPlaylist, loadPrefs, savePrefs } from './services/storage.ts'
 import { mountToasts } from './ui/components/toast.ts'
 import { el } from './ui/dom.ts'
+import { icon } from './ui/icons.ts'
 import { Masthead } from './ui/Masthead.ts'
 import { MobileTabs } from './ui/MobileTabs.ts'
 import { Monitor } from './ui/Monitor.ts'
@@ -31,6 +33,7 @@ import { LibraryMenu } from './ui/LibraryMenu.ts'
 import { LyricsPanel } from './ui/LyricsPanel.ts'
 import { SearchPanel } from './ui/SearchPanel.ts'
 import { mountOrbitCursor } from './ui/OrbitCursor.ts'
+import { CinemaMode } from './ui/CinemaMode.ts'
 import { SettingsMenu } from './ui/SettingsMenu.ts'
 import { SleepMenu } from './ui/SleepMenu.ts'
 import { createLiveSoundChip } from './ui/LiveSoundChip.ts'
@@ -74,6 +77,7 @@ if (root) {
   const lyrics = new LyricsPanel(app)
   const rail = new LeftRail(search.root, lyrics.root)
   const now = new NowPlaying(app)
+  lyrics.onActiveLine((text) => now.setKaraoke(text))
   const liveChip = createLiveSoundChip(reactor)
   if (liveChip) now.tags.append(liveChip)
   const libraryMenu = new LibraryMenu(app)
@@ -103,14 +107,33 @@ if (root) {
   playback.onTrackEnd(() => sleep.songEnded())
   const sleepMenu = new SleepMenu(sleep)
   bindMediaSession(app)
+  let cinemaDelay = prefs.cinemaDelay
+  let cinemaFullscreen = prefs.cinemaFullscreen
+  const cinema = new CinemaMode(app, { delayMs: () => cinemaDelay, fullscreen: () => cinemaFullscreen })
   const settings = new SettingsMenu({
     vinyl: prefs.vinyl,
     onVinyl: (enabled) => {
       document.documentElement.dataset.vinyl = String(enabled)
       savePrefs({ vinyl: enabled })
     },
+    cinemaDelay,
+    onCinemaDelay: (delay) => {
+      cinemaDelay = delay
+      savePrefs({ cinemaDelay: delay })
+    },
+    cinemaFullscreen,
+    onCinemaFullscreen: (enabled) => {
+      cinemaFullscreen = enabled
+      savePrefs({ cinemaFullscreen: enabled })
+    },
   })
-  masthead.actions.append(now.volumeControl, sleepMenu.button, settings.button, help.button)
+  const cinemaButton = el('button', {
+    class: 'icon-button',
+    attrs: { type: 'button', 'aria-label': 'Player mode', title: 'Player mode (O)' },
+  }, [icon('cinema')])
+  cinemaButton.addEventListener('click', () => cinema.enter(true))
+  cinema.onChange(() => now.resetHover())
+  masthead.actions.append(cinemaButton, now.volumeControl, sleepMenu.button, settings.button, help.button)
 
   shell.append(masthead.root, rail.root, now.root, visualizer.root, queue.root, monitor.root, tabs.root)
   const compact = window.matchMedia('(max-width: 920px)')
@@ -139,6 +162,7 @@ if (root) {
         search.focus()
       },
       toggleLyrics,
+      toggleCinema: () => cinema.toggle(),
       focusFilter: () => {
         tabs.show('queue')
         queue.focusFilter()
