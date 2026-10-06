@@ -39,6 +39,8 @@ export class PlaybackController {
   private loadToken = 0
   private abort: AbortController | null = null
   private failures = 0
+  private stopAfter = false
+  private readonly endListeners = new Set<() => void>()
   private snapshot: PlaybackState = {
     status: 'idle',
     nodeId: null,
@@ -117,6 +119,19 @@ export class PlaybackController {
       this.stopAll()
     }
     return result
+  }
+
+  setStopAfterCurrent(enabled: boolean): void {
+    this.stopAfter = enabled
+  }
+
+  onTrackEnd(listener: () => void): () => void {
+    this.endListeners.add(listener)
+    return () => this.endListeners.delete(listener)
+  }
+
+  pause(): void {
+    if (this.isPlaying) this.active?.pause()
   }
 
   seek(ms: number): void {
@@ -269,6 +284,14 @@ export class PlaybackController {
   }
 
   private async handleEnded(): Promise<void> {
+    const stop = this.stopAfter
+    this.stopAfter = false
+    for (const listener of this.endListeners) listener()
+    if (stop) {
+      this.active?.seek(0)
+      this.update({ status: 'paused', currentMs: 0 })
+      return
+    }
     const current = this.playlist.current
     const node = this.playlist.advanceAfterEnd()
     if (!node) {

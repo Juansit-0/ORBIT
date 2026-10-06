@@ -194,6 +194,29 @@ describe('PlaybackController', () => {
     expect(full.loaded?.videoId).toBe('v-b')
   })
 
+  it('stops after the current song when asked', async () => {
+    const ended = vi.fn()
+    controller.onTrackEnd(ended)
+    await controller.togglePlay()
+    controller.setStopAfterCurrent(true)
+    full.end()
+    await flush()
+    expect(ended).toHaveBeenCalledTimes(1)
+    expect(controller.state.status).toBe('paused')
+    expect(playlist.current?.value.id).toBe('a')
+    full.end()
+    await flush()
+    expect(playlist.current?.value.id).toBe('b')
+  })
+
+  it('pause only acts while playing', async () => {
+    controller.pause()
+    expect(full.playing).toBe(false)
+    await controller.togglePlay()
+    controller.pause()
+    expect(controller.state.status).toBe('paused')
+  })
+
   it('clamps seek and volume', async () => {
     await controller.togglePlay()
     controller.seek(-50)

@@ -11,7 +11,7 @@ export interface ToastAction {
 export interface ToastOptions {
   tone?: ToastTone
   title: string
-  detail?: string
+  detail?: string | undefined
   duration?: number
   action?: ToastAction
 }
