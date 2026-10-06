@@ -22,6 +22,7 @@ export class LyricsPanel {
   private active = -1
   private abort: AbortController | null = null
   private userScrollUntil = 0
+  private lineListener: ((text: string | null) => void) | null = null
 
   constructor(app: PlayerApp) {
     this.app = app
@@ -33,6 +34,10 @@ export class LyricsPanel {
     this.body.addEventListener('touchmove', () => (this.userScrollUntil = performance.now() + USER_SCROLL_PAUSE_MS), { passive: true })
     app.playback.subscribe((state) => this.sync(state))
     app.playlist.subscribe(() => this.sync(app.playback.state))
+  }
+
+  onActiveLine(listener: (text: string | null) => void): void {
+    this.lineListener = listener
   }
 
   private currentSong(state: PlaybackState): Song | null {
@@ -151,6 +156,8 @@ export class LyricsPanel {
 
   private highlight(index: number): void {
     if (index === this.active) return
+    const synced = this.lyrics?.synced[index]
+    this.lineListener?.(synced && synced.text ? synced.text : null)
     const previous = this.lines[this.active]
     if (previous) {
       previous.removeAttribute('aria-current')

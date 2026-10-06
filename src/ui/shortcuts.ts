@@ -6,6 +6,7 @@ export interface ShortcutTargets {
   focusSearch: () => void
   focusFilter: () => void
   toggleLyrics: () => void
+  toggleCinema: () => void
 }
 
 export const SHORTCUTS: { keys: string[]; action: string }[] = [
@@ -18,6 +19,7 @@ export const SHORTCUTS: { keys: string[]; action: string }[] = [
   { keys: ['R'], action: 'Cycle repeat' },
   { keys: ['M'], action: 'Mute or unmute' },
   { keys: ['L'], action: 'Show lyrics' },
+  { keys: ['O'], action: 'Player mode' },
   { keys: ['/'], action: 'Search songs' },
   { keys: ['F'], action: 'Filter the flight plan' },
   { keys: ['Ctrl', 'Z'], action: 'Undo' },
@@ -91,6 +93,8 @@ export function bindShortcuts(app: PlayerApp, targets: ShortcutTargets, help: HT
         lastVolume = volume
         app.playback.setVolume(0)
       } else app.playback.setVolume(lastVolume || 80)
+    } else if (key === 'o' || key === 'O') {
+      targets.toggleCinema()
     } else if (key === 'l' || key === 'L') {
       targets.toggleLyrics()
     } else if (key === '/') {

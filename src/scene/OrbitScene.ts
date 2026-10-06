@@ -424,18 +424,31 @@ export class OrbitScene {
     this.camera.updateProjectionMatrix()
   }
 
-  private place(): boolean {
+  private placed: { x: number; y: number; radius: number } | null = null
+
+  private place(delta: number): boolean {
     const rect = this.anchor.getBoundingClientRect()
-    if (rect.width === 0 || rect.height === 0) return false
+    if (rect.width === 0 || rect.height === 0) {
+      this.placed = null
+      return false
+    }
     const height = window.innerHeight
     const worldPerPixel = (2 * CAMERA_DISTANCE * Math.tan((FOV * Math.PI) / 360)) / height
     const cx = rect.left + rect.width / 2 - window.innerWidth / 2
     const cy = rect.top + rect.height / 2 - height / 2
     const lens = this.anchor.querySelector('.lens')?.getBoundingClientRect()
     const radius = Math.max(Math.min(rect.width, rect.height) * 0.5, (lens?.width ?? 0) * 0.78) * worldPerPixel
-    this.points.position.set(cx * worldPerPixel, -cy * worldPerPixel, 0)
-    this.points.scale.setScalar(radius)
-    this.material.uniforms.uScale!.value = radius
+    const target = { x: cx * worldPerPixel, y: -cy * worldPerPixel, radius }
+    if (!this.placed) this.placed = target
+    const follow = 1 - Math.exp(-delta * 3.2)
+    this.placed = {
+      x: this.placed.x + (target.x - this.placed.x) * follow,
+      y: this.placed.y + (target.y - this.placed.y) * follow,
+      radius: this.placed.radius + (target.radius - this.placed.radius) * follow,
+    }
+    this.points.position.set(this.placed.x, this.placed.y, 0)
+    this.points.scale.setScalar(this.placed.radius)
+    this.material.uniforms.uScale!.value = this.placed.radius
     return true
   }
 
@@ -463,7 +476,7 @@ export class OrbitScene {
     const delta = Math.min(0.05, (now - this.lastFrame) / 1000)
     this.lastFrame = now
     this.resize()
-    this.visible = this.place()
+    this.visible = this.place(delta)
     if (!this.visible) return
     const elapsed = (now - this.start) / 1000
     const playing = this.input.playing
