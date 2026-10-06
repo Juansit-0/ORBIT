@@ -74,3 +74,83 @@ export function blend(base: Rgb, tint: Rgb, amount: number, maxLightness = 0.82)
   const scale = maxLightness / lightness
   return [mixed[0] * scale, mixed[1] * scale, mixed[2] * scale]
 }
+
+function hueDistance(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360
+  return d > 180 ? 360 - d : d
+}
+
+function hueOf(color: Rgb): number {
+  return toHsv(color[0], color[1], color[2])[0]
+}
+
+export function paletteColors(data: ArrayLike<number>, count = 5): Rgb[] {
+  const bins = 24
+  const weights = new Array<number>(bins).fill(0)
+  const sums = Array.from({ length: bins }, () => [0, 0, 0])
+  for (let i = 0; i + 3 < data.length; i += 4) {
+    if ((data[i + 3] ?? 255) < 128) continue
+    const r = (data[i] ?? 0) / 255
+    const g = (data[i + 1] ?? 0) / 255
+    const b = (data[i + 2] ?? 0) / 255
+    const [hue, saturation, value] = toHsv(r, g, b)
+    if (saturation < 0.12 || value < 0.12) continue
+    const weight = saturation * (0.35 + value)
+    const bin = Math.min(bins - 1, Math.floor((hue / 360) * bins))
+    weights[bin]! += weight
+    const sum = sums[bin]!
+    sum[0]! += r * weight
+    sum[1]! += g * weight
+    sum[2]! += b * weight
+  }
+  const ranked = weights
+    .map((weight, bin) => ({ weight, bin }))
+    .filter((entry) => entry.weight > 0)
+    .sort((a, b) => b.weight - a.weight)
+  const picked: Rgb[] = []
+  for (const { weight, bin } of ranked) {
+    const sum = sums[bin]!
+    const color: Rgb = [sum[0]! / weight, sum[1]! / weight, sum[2]! / weight]
+    if (picked.some((other) => hueDistance(hueOf(other), hueOf(color)) < 24)) continue
+    picked.push(color)
+    if (picked.length === count) break
+  }
+  const { vivid, deep } = dominantColors(data)
+  const fallback: Rgb[] = [vivid, deep]
+  let index = 0
+  while (picked.length < count) {
+    const base = picked[index % Math.max(1, picked.length)] ?? fallback[index % 2]!
+    const shade = 0.55 + 0.2 * (index % 3)
+    picked.push([base[0] * shade, base[1] * shade, base[2] * shade])
+    index += 1
+  }
+  return picked.map((color) => readable(vivify(color)))
+}
+
+function fromHsv(hue: number, saturation: number, value: number): Rgb {
+  const c = value * saturation
+  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1))
+  const m = value - c
+  const [r, g, b] =
+    hue < 60 ? [c, x, 0] : hue < 120 ? [x, c, 0] : hue < 180 ? [0, c, x] : hue < 240 ? [0, x, c] : hue < 300 ? [x, 0, c] : [c, 0, x]
+  return [r + m, g + m, b + m]
+}
+
+export function vivify(color: Rgb, boost = 1.45): Rgb {
+  const [hue, saturation, value] = toHsv(color[0], color[1], color[2])
+  if (saturation < 0.05) return color
+  return fromHsv(hue, Math.min(1, saturation * boost + 0.12), Math.min(1, value * 1.08))
+}
+
+export function readable(color: Rgb, maxLightness = 0.55, minLightness = 0.08): Rgb {
+  const lightness = 0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2]
+  if (lightness > maxLightness) {
+    const scale = maxLightness / lightness
+    return [color[0] * scale, color[1] * scale, color[2] * scale]
+  }
+  if (lightness < minLightness) {
+    const lift = minLightness - lightness
+    return [Math.min(1, color[0] + lift), Math.min(1, color[1] + lift), Math.min(1, color[2] + lift)]
+  }
+  return color
+}

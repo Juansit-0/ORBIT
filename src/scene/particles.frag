@@ -9,6 +9,8 @@ varying float vHeat;
 varying float vFacing;
 varying float vSeed;
 varying float vRing;
+uniform float uPaletteMix;
+varying vec3 vPalette;
 
 void main() {
   vec2 c = gl_PointCoord - 0.5;
@@ -19,6 +21,8 @@ void main() {
   vec3 color = mix(uInk, uChart, 0.25 + 0.75 * vLight);
   color = mix(color, uKey, vLight * vLight * 0.45);
   color = mix(color, uChart, vRim * 0.55);
+  vec3 shaded = vPalette * (0.72 + 0.55 * vLight) + uKey * vLight * vLight * 0.12 + vPalette * vRim * 0.35;
+  color = mix(color, shaded, uPaletteMix * (1.0 - vRing));
   color = mix(color, mix(uBurn, uKey, vSeed * 0.4), vRing);
   color = mix(color, uBurn, smoothstep(0.05, 0.55, vHeat));
 
