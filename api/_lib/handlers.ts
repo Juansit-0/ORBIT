@@ -6,6 +6,7 @@ export interface ApiSong {
   artworkUrl: string
   durationMs: number
   previewUrl?: string
+  genre?: string
 }
 
 export interface ApiResult {
@@ -23,6 +24,7 @@ interface ItunesTrack {
   artworkUrl100?: string
   trackTimeMillis?: number
   previewUrl?: string
+  primaryGenreName?: string
   kind?: string
 }
 
@@ -42,6 +44,7 @@ export function mapItunesTrack(track: ItunesTrack): ApiSong | null {
     durationMs: track.trackTimeMillis ?? 0,
   }
   if (track.previewUrl) song.previewUrl = track.previewUrl
+  if (track.primaryGenreName) song.genre = track.primaryGenreName
   return song
 }
 

@@ -239,6 +239,21 @@ describe('PlaybackController', () => {
     expect(full.loaded?.videoId).toBe('v-b')
   })
 
+  it('reports the end of the plan and of loose songs', async () => {
+    const planEnded = vi.fn()
+    const looseEnded = vi.fn()
+    controller.onPlanEnd(planEnded)
+    controller.onLooseEnd(looseEnded)
+    await controller.playNode(playlist.list.tail!.id)
+    full.end()
+    await flush()
+    expect(planEnded).toHaveBeenCalledWith(expect.objectContaining({ id: 'c' }))
+    await controller.playSong(song('x'))
+    full.end()
+    await flush()
+    expect(looseEnded).toHaveBeenCalledWith(expect.objectContaining({ id: 'x' }))
+  })
+
   it('stops after the current song when asked', async () => {
     const ended = vi.fn()
     controller.onTrackEnd(ended)

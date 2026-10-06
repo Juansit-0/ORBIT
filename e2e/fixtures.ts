@@ -158,6 +158,6 @@ export class OrbitPage {
   }
 
   toast(text: string | RegExp): Locator {
-    return this.page.locator('.toast').filter({ hasText: text })
+    return this.page.locator('.toast:not([data-leaving])').filter({ hasText: text })
   }
 }

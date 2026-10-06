@@ -6,6 +6,7 @@ export interface Song {
   artworkUrl: string
   durationMs: number
   previewUrl?: string
+  genre?: string
   videoId?: string
   unavailable?: boolean
 }
