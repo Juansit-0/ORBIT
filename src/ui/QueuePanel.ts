@@ -8,6 +8,7 @@ import { ActionSheet } from './ActionSheet.ts'
 import { isLongPress } from './gestures.ts'
 import { formatTime, plural } from './format.ts'
 import { icon } from './icons.ts'
+import { etaFor, formatClock } from '../core/eta.ts'
 
 interface RowRefs {
   row: HTMLLIElement
@@ -17,6 +18,7 @@ interface RowRefs {
   artist: HTMLElement
   inlineTime: HTMLElement
   time: HTMLElement
+  eta: HTMLElement
   status: HTMLElement
   main: HTMLButtonElement
   up: HTMLButtonElement
@@ -29,6 +31,8 @@ export class QueuePanel {
   readonly list: HTMLOListElement
   private readonly app: PlayerApp
   private readonly summary: HTMLElement
+  private readonly landing: HTMLElement
+  private etaKey = ''
   private readonly filter: HTMLInputElement
   private readonly empty: HTMLElement
   private readonly noMatch: HTMLElement
@@ -42,6 +46,7 @@ export class QueuePanel {
   constructor(app: PlayerApp, library: HTMLElement) {
     this.app = app
     this.summary = el('p', { class: 'rail__meta' })
+    this.landing = el('p', { class: 'queue__landing', attrs: { hidden: true } })
     this.filter = el('input', {
       class: 'filter__input',
       attrs: { id: 'queue-filter', type: 'search', placeholder: 'Filter the flight plan', autocomplete: 'off' },
@@ -56,7 +61,7 @@ export class QueuePanel {
     this.root = el('aside', { class: 'rail rail--queue', attrs: { id: 'panel-queue', 'aria-labelledby': 'queue-heading' } }, [
       el('header', { class: 'rail__head' }, [
         el('h2', { class: 'rail__title', text: 'Flight plan', attrs: { id: 'queue-heading' } }),
-        this.summary,
+        el('div', { class: 'rail__metas' }, [this.summary, this.landing]),
       ]),
       el('div', { class: 'library-bar' }, [library]),
       el('div', { class: 'filter' }, [
@@ -88,7 +93,10 @@ export class QueuePanel {
       },
     })
     app.playlist.subscribe(() => this.render())
-    app.playback.subscribe(() => this.renderCurrent())
+    app.playback.subscribe(() => {
+      this.renderCurrent()
+      this.renderEta()
+    })
     this.render()
   }
 
@@ -126,6 +134,8 @@ export class QueuePanel {
     this.empty.hidden = nodes.length > 0
     this.list.hidden = nodes.length === 0
     this.renderCurrent()
+    this.etaKey = ''
+    this.renderEta()
     this.applyFilter(false)
     const rows = nodes.map((node) => this.rows.get(node.id)?.row).filter((row): row is HTMLLIElement => Boolean(row))
     if (this.suppressFlip) {
@@ -147,6 +157,38 @@ export class QueuePanel {
     }
   }
 
+  private renderEta(): void {
+    const playlist = this.app.playlist
+    const state = this.app.playback.state
+    const playing = this.app.playback.isPlaying
+    const loose = Boolean(state.song && !state.inPlan)
+    const result = playing
+      ? etaFor({
+          order: playlist.playOrder().map((node) => ({ id: node.id, durationMs: node.value.durationMs, unavailable: Boolean(node.value.unavailable) })),
+          currentId: playlist.current?.id ?? null,
+          positionMs: state.currentMs,
+          currentDurationMs: state.durationMs,
+          now: Date.now(),
+          repeat: playlist.repeat,
+          looseRemainingMs: loose ? Math.max(0, state.durationMs - state.currentMs) : undefined,
+        })
+      : null
+    const minute = (time: number) => Math.floor(time / 60000)
+    const key = result ? `${[...result.starts].map(([id, time]) => `${id}:${minute(time)}`).join(',')}|${result.landsAt === null ? '' : minute(result.landsAt)}` : 'idle'
+    if (key === this.etaKey) return
+    this.etaKey = key
+    for (const [id, refs] of this.rows) {
+      const start = result?.starts.get(id)
+      setText(refs.eta, start === undefined ? '' : formatClock(start))
+      refs.eta.hidden = start === undefined
+      if (start === undefined) refs.eta.removeAttribute('aria-label')
+      else refs.eta.setAttribute('aria-label', `Plays at ${formatClock(start)}`)
+    }
+    const landsAt = result?.landsAt ?? null
+    this.landing.hidden = landsAt === null
+    setText(this.landing, landsAt === null ? '' : `Lands at ${formatClock(landsAt)}`)
+  }
+
   private createRow(node: SongNode): RowRefs {
     const refs: RowRefs = {
       row: el('li', { class: 'waypoint', attrs: { 'data-node-id': node.id } }),
@@ -156,6 +198,7 @@ export class QueuePanel {
       artist: el('span', { class: 'waypoint__artist' }),
       inlineTime: el('span', { class: 'waypoint__inline-time' }),
       time: el('span', { class: 'waypoint__time' }),
+      eta: el('span', { class: 'waypoint__eta' }),
       status: el('span', { class: 'waypoint__status' }),
       main: el('button', { class: 'waypoint__main', attrs: { type: 'button' } }),
       up: el('button', { class: 'icon-button icon-button--small', attrs: { type: 'button' } }, [icon('up')]),
@@ -178,7 +221,7 @@ export class QueuePanel {
       el('span', { class: 'waypoint__dot', attrs: { 'aria-hidden': 'true' } }),
       refs.main,
       el('span', { class: 'waypoint__end' }, [
-        refs.time,
+        el('span', { class: 'waypoint__clock' }, [refs.time, refs.eta]),
         el('span', { class: 'waypoint__moves' }, [refs.up, refs.down]),
       ]),
       refs.remove,
