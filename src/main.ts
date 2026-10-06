@@ -34,6 +34,7 @@ import { LyricsPanel } from './ui/LyricsPanel.ts'
 import { SearchPanel } from './ui/SearchPanel.ts'
 import { mountOrbitCursor } from './ui/OrbitCursor.ts'
 import { CinemaMode } from './ui/CinemaMode.ts'
+import { CommandPalette } from './ui/CommandPalette.ts'
 import { SettingsMenu } from './ui/SettingsMenu.ts'
 import { SleepMenu } from './ui/SleepMenu.ts'
 import { createLiveSoundChip } from './ui/LiveSoundChip.ts'
@@ -152,7 +153,17 @@ if (root) {
   compact.addEventListener('change', placeMonitor)
   now.root.addEventListener('scroll', placeMonitor, { passive: true })
   new ResizeObserver(placeMonitor).observe(now.stage)
-  root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel)
+  const palette = new CommandPalette(app, {
+    toggleCinema: () => cinema.toggle(),
+    toggleLyrics: () => toggleLyrics(),
+    setSleep: (minutes) => sleep.set(minutes === null ? { kind: 'off' } : minutes === 'end' ? { kind: 'end-of-song' } : { kind: 'minutes', minutes }),
+    focusSearch: () => {
+      tabs.show('search')
+      rail.show('search')
+      search.focus()
+    },
+  })
+  root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog)
   mountOrbitCursor()
   mountToasts(document.body)
   mountScene(now.stage, playback, (scene) => {
@@ -169,6 +180,7 @@ if (root) {
       },
       toggleLyrics,
       toggleCinema: () => cinema.toggle(),
+      togglePalette: () => palette.toggle(),
       focusFilter: () => {
         tabs.show('queue')
         queue.focusFilter()

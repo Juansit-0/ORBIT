@@ -2199,3 +2199,226 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 .result__actions .chip--icon {
   padding: 0;
 }
+
+.transport {
+  position: relative;
+}
+
+.peek {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 200px;
+  max-width: 260px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--rule), var(--shadow-2);
+  text-align: left;
+  pointer-events: none;
+  animation: toast-in var(--dur-2) var(--ease-out);
+}
+
+.peek[data-side='next'] {
+  right: 0;
+}
+
+.peek[data-side='previous'] {
+  left: 0;
+}
+
+.peek__cover {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.peek__text {
+  display: grid;
+  min-width: 0;
+}
+
+.peek__label,
+.peek__hint {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--burn-ink);
+}
+
+.peek__hint {
+  color: var(--ink-2);
+}
+
+.peek__title,
+.peek__artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.peek__title {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.peek__artist {
+  color: var(--ink-2);
+  font-size: var(--text-caption);
+}
+
+.palette {
+  width: min(640px, calc(100% - 32px));
+  max-height: min(560px, calc(100svh - 96px));
+  margin: 12svh auto auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--rule), var(--shadow-3);
+  overflow: hidden;
+}
+
+.palette[open] {
+  display: flex;
+  flex-direction: column;
+  animation: toast-in var(--dur-3) var(--ease-out);
+}
+
+.palette::backdrop {
+  background: rgb(16 50 74 / 0.18);
+  backdrop-filter: blur(3px);
+}
+
+.palette__field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.palette__icon {
+  color: var(--ink-2);
+}
+
+.palette__input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  font-size: var(--text-body-lg);
+  outline: none;
+}
+
+.palette__input:focus-visible {
+  box-shadow: none;
+}
+
+.palette__list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-2);
+  overflow-y: auto;
+  list-style: none;
+}
+
+.palette__group {
+  margin: var(--space-2) var(--space-2) var(--space-1);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--ink-2);
+}
+
+.palette__item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.palette__item[aria-selected='true'] {
+  background: var(--burn-wash);
+}
+
+.palette__glyph {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--sky);
+  color: var(--ink);
+}
+
+.palette__glyph .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.palette__cover {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.palette__text {
+  display: grid;
+  min-width: 0;
+}
+
+.palette__label,
+.palette__sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette__label {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.palette__sub {
+  color: var(--ink-2);
+  font-size: var(--text-caption);
+}
+
+.palette__hint {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.palette__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-2);
+  font-size: var(--text-caption);
+}
+
+.palette__status,
+.palette__keys {
+  margin: 0;
+}
+
+@media (max-width: 920px) {
+  .palette__keys {
+    display: none;
+  }
+}

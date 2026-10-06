@@ -32,6 +32,7 @@ export class NowPlaying {
   readonly tags: HTMLElement
   private readonly planTag: HTMLButtonElement
   private readonly karaoke: HTMLElement
+  private readonly peek: HTMLElement
   private readonly scale = el('div', { class: 'seek-scale', attrs: { 'aria-hidden': 'true' } })
   private readonly liquid = new LiquidProgress()
   private seeking = false
@@ -103,12 +104,34 @@ export class NowPlaying {
       ]),
       el('div', { class: 'deck__controls' }, [
         el('div', { class: 'seek' }, [el('div', { class: 'seek__bar' }, [this.liquid.canvas, this.seek]), this.scale]),
-        el('div', { class: 'transport' }, [this.shuffleButton, this.prevButton, this.playButton, this.nextButton, this.repeatButton]),
+        el('div', { class: 'transport' }, [
+          this.shuffleButton,
+          this.prevButton,
+          this.playButton,
+          this.nextButton,
+          this.repeatButton,
+          (this.peek = el('div', { class: 'peek', attrs: { role: 'tooltip', id: 'peek', hidden: true } })),
+        ]),
       ]),
     ])
     this.volumeControl = el('div', { class: 'volume' }, [this.muteButton, this.volume])
     this.bind()
     for (const button of [this.playButton, this.prevButton, this.nextButton]) magnetize(button, button === this.playButton ? 7 : 5)
+    for (const [button, direction] of [
+      [this.nextButton, 'next'],
+      [this.prevButton, 'previous'],
+    ] as const) {
+      const show = () => this.showPeek(button, direction)
+      const hide = () => {
+        this.peek.hidden = true
+        button.removeAttribute('aria-describedby')
+      }
+      button.addEventListener('pointerenter', show)
+      button.addEventListener('focus', show)
+      button.addEventListener('pointerleave', hide)
+      button.addEventListener('blur', hide)
+      button.addEventListener('click', () => window.setTimeout(() => (this.peek.hidden ? undefined : show()), 60))
+    }
     this.stage.addEventListener('pointerenter', (event) => {
       if (event.pointerType !== 'mouse' || document.documentElement.dataset.cinema === 'true') return
       window.clearTimeout(this.leaveTimer)
@@ -133,6 +156,33 @@ export class NowPlaying {
     this.revealListener = listener
     this.lastShown = null
     this.evaluateReveal()
+  }
+
+  private showPeek(button: HTMLButtonElement, direction: 'next' | 'previous'): void {
+    const playlist = this.app.playlist
+    const state = this.app.playback.state
+    const loose = Boolean(state.song && !state.inPlan)
+    const node = loose ? (playlist.current ?? playlist.peekNext()) : direction === 'next' ? playlist.peekNext() : playlist.peekPrevious()
+    const label = loose ? 'Back to your flight plan' : direction === 'next' ? 'Up next' : 'Previous'
+    if (!node) {
+      this.peek.replaceChildren(
+        el('span', { class: 'peek__label', text: direction === 'next' ? 'End of the flight plan' : 'Start of the flight plan' }),
+        el('span', { class: 'peek__hint', text: playlist.isEmpty() ? 'Add songs to start.' : 'Repeat all loops around.' }),
+      )
+    } else {
+      const position = playlist.list.indexOf(node) + 1
+      this.peek.replaceChildren(
+        el('img', { class: 'peek__cover', attrs: { src: node.value.artworkUrl.replace('600x600', '120x120'), alt: '', width: 40, height: 40 } }),
+        el('span', { class: 'peek__text' }, [
+          el('span', { class: 'peek__label', text: `${label} · #${position}` }),
+          el('span', { class: 'peek__title', text: node.value.title }),
+          el('span', { class: 'peek__artist', text: node.value.artist }),
+        ]),
+      )
+    }
+    this.peek.dataset.side = direction
+    this.peek.hidden = false
+    button.setAttribute('aria-describedby', 'peek')
   }
 
   setKaraoke(text: string | null): void {
