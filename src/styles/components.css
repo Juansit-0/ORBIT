@@ -2114,3 +2114,22 @@ html:not(.has-scene) .lens[data-cover='shown'] {
     padding-bottom: var(--space-4);
   }
 }
+
+.chip--play {
+  background: var(--burn);
+  color: var(--ink);
+}
+
+.chip--play:hover {
+  background: var(--burn-hover);
+}
+
+.plan-tag.deck__chip {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.plan-tag.deck__chip:hover {
+  background: var(--ink-2);
+}

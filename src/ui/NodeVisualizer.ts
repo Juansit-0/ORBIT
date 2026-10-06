@@ -142,7 +142,7 @@ export class NodeVisualizer {
 
   private renderCurrent(): void {
     const current = this.app.playlist.current?.id ?? null
-    const playing = this.app.playback.isPlaying
+    const playing = this.app.playback.isPlaying && this.app.playback.state.nodeId === current
     const currentNode = this.app.playlist.current
     const position = currentNode ? this.app.playlist.list.indexOf(currentNode) + 1 : 0
     setText(

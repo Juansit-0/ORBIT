@@ -177,6 +177,10 @@ export class SearchPanel {
       class: 'chip',
       attrs: { type: 'button', 'aria-expanded': 'false', 'aria-label': `Insert ${label} at a position` },
     }, [icon('insert'), el('span', { text: 'At #' })])
+    const playButton = el('button', {
+      class: 'chip chip--play',
+      attrs: { type: 'button', 'aria-label': `Play ${label} now without adding it`, title: 'Play now without adding it' },
+    }, [icon('playSmall'), el('span', { text: 'Play' })])
     const firstButton = el('button', {
       class: 'chip',
       attrs: { type: 'button', 'aria-label': `Add ${label} at the start` },
@@ -191,7 +195,7 @@ export class SearchPanel {
         el('p', { class: 'result__title', text: song.title }),
         el('p', { class: 'result__artist', text: `${song.artist} · ${formatTime(song.durationMs)}` }),
       ]),
-      el('div', { class: 'result__actions' }, [firstButton, lastButton, atButton]),
+      el('div', { class: 'result__actions' }, [playButton, firstButton, lastButton, atButton]),
       insertForm,
     ])
     const setOpen = (open: boolean) => {
@@ -208,6 +212,7 @@ export class SearchPanel {
         insertInput.select()
       }
     }
+    playButton.addEventListener('click', () => void this.app.playNow(song))
     firstButton.addEventListener('click', () => void this.app.addFirst(song))
     lastButton.addEventListener('click', () => void this.app.addLast(song))
     atButton.addEventListener('click', () => setOpen(!item.classList.contains('result--inserting')))

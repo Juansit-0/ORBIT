@@ -1,3 +1,4 @@
+import { ListNode } from '../core/ListNode.ts'
 import type { Playlist, RemoveResult } from '../core/Playlist.ts'
 import type { SongNode } from '../core/SongNode.ts'
 import type { Song } from '../core/types.ts'
@@ -13,6 +14,8 @@ export interface PlaybackState {
   durationMs: number
   source: SourceKind | null
   volume: number
+  song: Song | null
+  inPlan: boolean
 }
 
 export type PlaybackNotice =
@@ -49,7 +52,10 @@ export class PlaybackController {
     durationMs: 0,
     source: null,
     volume: 80,
+    song: null,
+    inPlan: false,
   }
+  private transient: SongNode | null = null
 
   constructor(playlist: Playlist, deps: PlaybackDeps) {
     this.playlist = playlist
@@ -58,6 +64,9 @@ export class PlaybackController {
     for (const adapter of adapters) adapter.subscribe((event) => this.handle(adapter, event))
     this.snapshot.nodeId = playlist.current?.id ?? null
     this.snapshot.durationMs = playlist.current?.value.durationMs ?? 0
+    this.snapshot.song = playlist.current?.value ?? null
+    this.snapshot.inPlan = Boolean(playlist.current)
+    playlist.subscribe(() => this.update({}))
   }
 
   get state(): PlaybackState {
@@ -79,7 +88,24 @@ export class PlaybackController {
     return () => this.noticeListeners.delete(listener)
   }
 
+  get transientNode(): SongNode | null {
+    return this.transient && this.snapshot.nodeId === this.transient.id ? this.transient : null
+  }
+
+  async playSong(song: Song): Promise<void> {
+    this.transient = new ListNode({ ...song, unavailable: false })
+    this.failures = 0
+    await this.load(this.transient, true)
+  }
+
+  takeTransient(): SongNode | null {
+    const node = this.transientNode
+    this.transient = null
+    return node
+  }
+
   async playNode(nodeId: string): Promise<void> {
+    this.transient = null
     const node = this.playlist.select(nodeId)
     if (!node) return
     if (node.value.unavailable) {
@@ -95,6 +121,12 @@ export class PlaybackController {
       this.active?.pause()
       return
     }
+    const loose = this.transientNode
+    if (loose) {
+      if (this.loadedNodeId === loose.id && this.active) this.active.play()
+      else await this.load(loose, true)
+      return
+    }
     const node = this.playlist.current ?? this.playlist.next()
     if (!node) return
     if (this.loadedNodeId === node.id && this.active) this.active.play()
@@ -102,6 +134,7 @@ export class PlaybackController {
   }
 
   async next(): Promise<boolean> {
+    if (this.transientNode) return this.resumePlan()
     const node = this.playlist.next()
     if (!node) return false
     await this.load(node, true)
@@ -109,6 +142,7 @@ export class PlaybackController {
   }
 
   async previous(): Promise<boolean> {
+    if (this.transientNode) return this.resumePlan()
     const node = this.playlist.previous()
     if (!node) return false
     await this.load(node, true)
@@ -117,8 +151,12 @@ export class PlaybackController {
 
   async remove(nodeId: string): Promise<RemoveResult | null> {
     const wasPlaying = this.isPlaying
+    const playingThis = this.snapshot.nodeId === nodeId
     const result = this.playlist.remove(nodeId)
-    if (!result?.wasCurrent) return result
+    if (!result?.wasCurrent || !playingThis) {
+      this.update({})
+      return result
+    }
     if (result.current) {
       if (wasPlaying) await this.load(result.current, true)
       else this.cue(result.current)
@@ -160,12 +198,32 @@ export class PlaybackController {
   }
 
   syncWithPlaylist(): void {
+    if (this.transientNode) {
+      this.update({})
+      return
+    }
     const current = this.playlist.current
     if (!current) {
       if (this.snapshot.nodeId !== null) this.stopAll()
       return
     }
     if (current.id !== this.snapshot.nodeId && current.id !== this.loadedNodeId) this.cue(current)
+  }
+
+  private async resumePlan(): Promise<boolean> {
+    this.transient = null
+    const node = this.playlist.current ?? this.playlist.next()
+    if (!node) {
+      this.stopAll()
+      return false
+    }
+    await this.load(node, true)
+    return true
+  }
+
+  private patchSong(node: SongNode, patch: Partial<Song>): void {
+    if (node === this.transient) node.value = { ...node.value, ...patch }
+    else this.playlist.updateSong(node.id, patch)
   }
 
   private cue(node: SongNode): void {
@@ -213,7 +271,7 @@ export class PlaybackController {
     const videoId = ids[0]
     if (videoId) {
       this.attempts.set(node.id, { ids, index: 0 })
-      if (song.videoId !== videoId) this.playlist.updateSong(node.id, { videoId })
+      if (song.videoId !== videoId) this.patchSong(node, { videoId })
       await this.start(this.deps.full, { videoId, durationMs: song.durationMs }, node, 'full', autoplay, token)
       return
     }
@@ -263,8 +321,14 @@ export class PlaybackController {
   }
 
   private markUnavailable(node: SongNode): void {
-    this.playlist.updateSong(node.id, { unavailable: true })
+    this.patchSong(node, { unavailable: true })
     this.notify({ type: 'unavailable', song: node.value })
+    if (node === this.transient) {
+      this.active?.stop()
+      this.loadedNodeId = null
+      this.update({ status: 'idle', currentMs: 0, source: null })
+      return
+    }
     void this.skipUnavailable(node)
   }
 
@@ -313,7 +377,7 @@ export class PlaybackController {
     const nextId = attempt ? attempt.ids[attempt.index + 1] : undefined
     if (attempt && nextId) {
       attempt.index += 1
-      this.playlist.updateSong(node.id, { videoId: nextId })
+      this.patchSong(node, { videoId: nextId })
       this.update({ status: 'loading' })
       await this.start(this.deps.full, { videoId: nextId, durationMs: node.value.durationMs }, node, 'full', true, token)
       return
@@ -327,6 +391,17 @@ export class PlaybackController {
     this.stopAfter = false
     for (const listener of this.endListeners) listener()
     if (stop) {
+      this.active?.seek(0)
+      this.update({ status: 'paused', currentMs: 0 })
+      return
+    }
+    const loose = this.transientNode
+    if (loose) {
+      if (this.playlist.repeat === 'one' && this.active) {
+        this.active.seek(0)
+        this.active.play()
+        return
+      }
       this.active?.seek(0)
       this.update({ status: 'paused', currentMs: 0 })
       return
@@ -347,7 +422,16 @@ export class PlaybackController {
   }
 
   private update(patch: Partial<PlaybackState>): void {
-    this.snapshot = { ...this.snapshot, ...patch }
+    const next = { ...this.snapshot, ...patch }
+    if (next.nodeId && this.transient && next.nodeId === this.transient.id) {
+      next.song = this.transient.value
+      next.inPlan = false
+    } else {
+      const node = next.nodeId ? this.playlist.list.findById(next.nodeId) : null
+      next.song = node?.value ?? null
+      next.inPlan = Boolean(node)
+    }
+    this.snapshot = next
     for (const listener of this.stateListeners) listener(this.snapshot)
   }
 

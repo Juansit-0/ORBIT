@@ -23,8 +23,7 @@ export function bindMediaSession(app: PlayerApp): void {
   }
   let lastKey = ''
   app.playback.subscribe((state) => {
-    const node = state.nodeId ? app.playlist.list.findById(state.nodeId) : null
-    const song = node?.value
+    const song = state.song
     const key = song ? `${song.id}:${song.title}` : ''
     if (key !== lastKey) {
       lastKey = key

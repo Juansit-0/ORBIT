@@ -1,5 +1,4 @@
 import type { PlaybackController } from '../player/PlaybackController.ts'
-import type { Playlist } from '../core/Playlist.ts'
 import type { AudioFeatures } from '../audio/analysis.ts'
 
 function webglAvailable(): boolean {
@@ -23,7 +22,6 @@ function firstVisit(): boolean {
 
 export function mountScene(
   anchor: HTMLElement,
-  playlist: Playlist,
   playback: PlaybackController,
   onReady: (scene: { setCoverShown(shown: boolean): void; setAudio(provider: () => AudioFeatures | null): void }) => void,
 ): void {
@@ -46,12 +44,11 @@ export function mountScene(
       })
       const sync = () => {
         const state = playback.state
-        const node = state.nodeId ? playlist.list.findById(state.nodeId) : null
         scene.setPlayback({
           playing: state.status === 'playing',
-          trackKey: node?.value.id ?? null,
+          trackKey: state.song?.id ?? null,
           positionMs: state.currentMs,
-          artworkUrl: node?.value.artworkUrl ?? null,
+          artworkUrl: state.song?.artworkUrl ?? null,
         })
       }
       playback.subscribe(sync)
