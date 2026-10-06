@@ -1,4 +1,6 @@
-import { Playlist, type PlaylistChange } from '../core/Playlist.ts'
+import { CommandHistory, type Command } from '../core/CommandHistory.ts'
+import { Playlist, type PlaylistChange, type RemoveResult } from '../core/Playlist.ts'
+import type { SongNode } from '../core/SongNode.ts'
 import type { Song } from '../core/types.ts'
 import type { PlaybackController, PlaybackNotice } from '../player/PlaybackController.ts'
 import { savePlaylist } from '../services/storage.ts'
@@ -10,6 +12,7 @@ export type InsertResult = { ok: true; position: number } | { ok: false; error: 
 export class PlayerApp {
   readonly playlist: Playlist
   readonly playback: PlaybackController
+  readonly history = new CommandHistory()
 
   constructor(playlist: Playlist, playback: PlaybackController) {
     this.playlist = playlist
@@ -20,13 +23,13 @@ export class PlayerApp {
 
   addFirst(song: Song): void {
     const duplicate = this.playlist.containsSong(song.id)
-    this.playlist.addFirst(song)
+    void this.history.run(this.insertCommand(0, song, `Add ${quoted(song.title)} first`))
     this.confirmAdd(song, 1, duplicate)
   }
 
   addLast(song: Song): void {
     const duplicate = this.playlist.containsSong(song.id)
-    this.playlist.addLast(song)
+    void this.history.run(this.insertCommand(this.playlist.size, song, `Add ${quoted(song.title)} last`))
     this.confirmAdd(song, this.playlist.size, duplicate)
   }
 
@@ -36,7 +39,7 @@ export class PlayerApp {
       return { ok: false, error: max === 1 ? 'The list is empty, so the only position is 1.' : `Choose a position from 1 to ${max}.` }
     }
     const duplicate = this.playlist.containsSong(song.id)
-    this.playlist.insertAt(position - 1, song)
+    void this.history.run(this.insertCommand(position - 1, song, `Insert ${quoted(song.title)} at ${position}`))
     this.confirmAdd(song, position, duplicate)
     return { ok: true, position }
   }
@@ -45,19 +48,65 @@ export class PlayerApp {
     const node = this.playlist.list.findById(nodeId)
     if (!node) return
     const position = this.playlist.list.indexOf(node) + 1
-    const result = await this.playback.remove(nodeId)
+    const outcome: { result: RemoveResult | null } = { result: null }
+    let index = position - 1
+    await this.history.run({
+      label: `Remove ${quoted(node.value.title)}`,
+      execute: async () => {
+        index = this.playlist.list.indexOf(node)
+        outcome.result = await this.playback.remove(node.id)
+      },
+      revert: () => {
+        this.playlist.insertNodeAt(Math.min(index, this.playlist.size), node)
+      },
+    })
+    const result = outcome.result
     if (!result) return
     const detail = result.wasCurrent
       ? result.current
         ? `It was playing, so ${quoted(result.current.value.title)} took its place.`
         : 'It was the last song, so playback stopped.'
       : `It was at position ${position}.`
-    showToast({ tone: 'success', title: `Removed ${quoted(result.song.title)}`, detail })
+    showToast({
+      tone: 'success',
+      title: `Removed ${quoted(result.song.title)}`,
+      detail,
+      action: { label: 'Undo', run: () => void this.undo() },
+    })
   }
 
   move(fromIndex: number, toIndex: number): void {
     if (fromIndex === toIndex || toIndex < 0 || toIndex >= this.playlist.size) return
-    this.playlist.move(fromIndex, toIndex)
+    const title = this.playlist.list.get(fromIndex)?.title ?? 'song'
+    void this.history.run({
+      label: `Move ${quoted(title)} to ${toIndex + 1}`,
+      execute: () => this.playlist.move(fromIndex, toIndex),
+      revert: () => this.playlist.move(toIndex, fromIndex),
+    })
+  }
+
+  async undo(): Promise<void> {
+    const command = await this.history.undo()
+    if (command) showToast({ tone: 'info', title: `Undid: ${command.label}`, action: { label: 'Redo', run: () => void this.redo() } })
+    else showToast({ tone: 'info', title: 'Nothing to undo' })
+  }
+
+  async redo(): Promise<void> {
+    const command = await this.history.redo()
+    showToast({ tone: 'info', title: command ? `Redid: ${command.label}` : 'Nothing to redo' })
+  }
+
+  private insertCommand(index: number, song: Song, label: string): Command {
+    let node: SongNode | null = null
+    return {
+      label,
+      execute: () => {
+        node = node ? this.playlist.insertNodeAt(index, node) : this.playlist.insertAt(index, song)
+      },
+      revert: async () => {
+        if (node) await this.playback.remove(node.id)
+      },
+    }
   }
 
   async play(nodeId: string): Promise<void> {

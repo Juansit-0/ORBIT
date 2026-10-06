@@ -1264,3 +1264,49 @@
   background-size: 100% 6px, 100% 3px;
   background-repeat: no-repeat;
 }
+
+.toast__action {
+  margin-top: var(--space-2);
+  padding: 4px var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+.toast__action:hover {
+  background: var(--ink-2);
+}
+
+.toast__action:active {
+  transform: scale(0.95);
+}
+
+.mast__history {
+  display: flex;
+}
+
+@media (max-width: 420px) {
+  .mast__history .icon-button {
+    width: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .volume {
+    width: auto;
+  }
+
+  .volume .range--volume {
+    display: none;
+  }
+
+  .mast__actions {
+    gap: 0;
+  }
+}

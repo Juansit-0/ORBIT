@@ -63,6 +63,10 @@ export class Playlist {
     return this.afterInsert(this.list.insertAt(index, song))
   }
 
+  insertNodeAt(index: number, node: SongNode): SongNode {
+    return this.afterInsert(this.list.insertNodeAt(index, node))
+  }
+
   remove(nodeId: string): RemoveResult | null {
     const node = this.list.findById(nodeId)
     if (!node) return null

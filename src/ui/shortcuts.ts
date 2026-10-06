@@ -18,6 +18,8 @@ export const SHORTCUTS: { keys: string[]; action: string }[] = [
   { keys: ['M'], action: 'Mute or unmute' },
   { keys: ['/'], action: 'Search songs' },
   { keys: ['F'], action: 'Filter the flight plan' },
+  { keys: ['Ctrl', 'Z'], action: 'Undo' },
+  { keys: ['Ctrl', 'Shift', 'Z'], action: 'Redo' },
   { keys: ['Alt', '↑ ↓'], action: 'Move the focused song' },
   { keys: ['Delete'], action: 'Remove the focused song' },
   { keys: ['?'], action: 'Show shortcuts' },
@@ -52,7 +54,15 @@ export function createShortcutHelp(): { button: HTMLButtonElement; panel: HTMLEl
 export function bindShortcuts(app: PlayerApp, targets: ShortcutTargets, help: HTMLElement): () => void {
   let lastVolume = 80
   const handler = (event: KeyboardEvent) => {
-    if (event.defaultPrevented || event.metaKey || event.ctrlKey) return
+    if (event.defaultPrevented) return
+    if (event.metaKey || event.ctrlKey) {
+      const key = event.key.toLowerCase()
+      if ((key === 'z' || key === 'y') && !isTyping(event.target)) {
+        event.preventDefault()
+        void (key === 'y' || event.shiftKey ? app.redo() : app.undo())
+      }
+      return
+    }
     if (isTyping(event.target)) {
       if (event.key === 'Escape' && event.target instanceof HTMLInputElement) event.target.blur()
       return

@@ -269,3 +269,25 @@ describe('DoublyLinkedList', () => {
     expectIntegrity(numbers)
   })
 })
+
+describe('insertNodeAt', () => {
+  it('relinks a detached node at the same place', () => {
+    const list = new DoublyLinkedList<string>()
+    for (const value of ['a', 'b', 'c']) list.addLast(value)
+    const node = list.getNode(1)!
+    list.removeNode(node)
+    list.insertNodeAt(1, node)
+    expect(list.toArray()).toEqual(['a', 'b', 'c'])
+    expect(list.getNode(1)).toBe(node)
+    expectIntegrity(list)
+  })
+
+  it('rejects a node that is still linked', () => {
+    const list = new DoublyLinkedList<string>()
+    list.addLast('a')
+    list.addLast('b')
+    expect(() => list.insertNodeAt(0, list.tail!)).toThrow()
+    expect(() => list.insertNodeAt(0, list.head!)).toThrow()
+    expectIntegrity(list)
+  })
+})

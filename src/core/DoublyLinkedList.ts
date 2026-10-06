@@ -32,6 +32,13 @@ export class DoublyLinkedList<T> implements Iterable<T> {
     return node
   }
 
+  insertNodeAt(index: number, node: ListNode<T>): ListNode<T> {
+    this.assertIndex(index, this.count)
+    if (node.prev || node.next || this.head === node) throw new Error('Node is already linked')
+    this.linkAt(index, node)
+    return node
+  }
+
   getNode(index: number): ListNode<T> | null {
     if (!Number.isInteger(index) || index < 0 || index >= this.count) return null
     if (index < this.count / 2) {
