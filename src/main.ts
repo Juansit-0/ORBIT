@@ -22,6 +22,7 @@ import { resolveVideoIds } from './services/resolveService.ts'
 import { mountScene } from './scene/mountScene.ts'
 import { lookupSongs } from './services/lookupService.ts'
 import { decodePlan } from './services/planCodec.ts'
+import { PlayHistory } from './services/history.ts'
 import { loadLibrary, loadPlaylist, loadPrefs, savePrefs } from './services/storage.ts'
 import { showToast } from './ui/components/toast.ts'
 import { mountToasts } from './ui/components/toast.ts'
@@ -81,7 +82,12 @@ if (root) {
 
   const shell = el('div', { class: 'app' })
   const masthead = new Masthead(app)
-  const search = new SearchPanel(app)
+  const played = new PlayHistory()
+  playback.subscribe((state) => {
+    const song = state.song ?? (state.nodeId ? (playlist.current?.value ?? null) : null)
+    played.observe({ song, playing: state.status === 'playing', currentMs: state.currentMs }, Date.now())
+  })
+  const search = new SearchPanel(app, played)
   const lyrics = new LyricsPanel(app)
   const now = new NowPlaying(app)
   now.mountLyrics(lyrics.root)
@@ -212,6 +218,7 @@ if (root) {
     },
     toggleList: () => toggleList(),
     listShown: () => listShown,
+    recent: () => played.entries().map((entry) => entry.song),
   })
   root.append(shell, more.panel, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
   mountOrbitCursor()

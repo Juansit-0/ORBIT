@@ -6,6 +6,7 @@ import { el, setText } from './dom.ts'
 import { formatTime } from './format.ts'
 import { icon } from './icons.ts'
 import { endSongDrag, startSongDrag } from './dropInsert.ts'
+import type { PlayHistory } from '../services/history.ts'
 
 const DEBOUNCE_MS = 350
 
@@ -19,9 +20,12 @@ export class SearchPanel {
   private timer: number | undefined
   private abort: AbortController | null = null
   private lastTerm = ''
+  private idle = true
+  private readonly history: PlayHistory | null
 
-  constructor(app: PlayerApp) {
+  constructor(app: PlayerApp, history: PlayHistory | null = null) {
     this.app = app
+    this.history = history
     this.input = el('input', {
       class: 'search__input',
       attrs: {
@@ -85,6 +89,9 @@ export class SearchPanel {
       this.input.focus()
     })
     app.playlist.subscribe(() => this.refreshPositionHints())
+    history?.subscribe(() => {
+      if (this.idle && this.input.value.trim() === '') this.renderIdle()
+    })
     this.renderIdle()
   }
 
@@ -140,7 +147,23 @@ export class SearchPanel {
   }
 
   private renderIdle(): void {
+    this.idle = true
     this.body.setAttribute('aria-busy', 'false')
+    const recent = this.history?.entries().slice(0, 8) ?? []
+    if (recent.length > 0) {
+      const clear = el('button', { class: 'button button--quiet button--small', text: 'Clear', attrs: { type: 'button', 'aria-label': 'Clear recently played' } })
+      clear.addEventListener('click', () => {
+        this.history?.clear()
+        this.input.focus()
+      })
+      this.body.replaceChildren(
+        el('section', { class: 'finder__section', attrs: { 'aria-labelledby': 'recent-heading' } }, [
+          el('header', { class: 'finder__section-head' }, [el('h2', { class: 'finder__section-title', text: 'Recently played', attrs: { id: 'recent-heading' } }), clear]),
+          el('ul', { class: 'results results--recent' }, recent.map((entry) => this.renderResult(entry.song))),
+        ]),
+      )
+      return
+    }
     this.body.replaceChildren(
       el('div', { class: 'empty' }, [
         icon('music', 'icon empty__icon'),
@@ -151,6 +174,7 @@ export class SearchPanel {
   }
 
   private renderMessage(title: string, text: string): void {
+    this.idle = false
     this.body.setAttribute('aria-busy', 'false')
     this.body.replaceChildren(
       el('div', { class: 'empty' }, [
@@ -161,6 +185,7 @@ export class SearchPanel {
   }
 
   private renderError(term: string): void {
+    this.idle = false
     const retry = el('button', { class: 'button button--quiet', text: 'Try again', attrs: { type: 'button' } })
     retry.addEventListener('click', () => this.run(term, true))
     this.body.setAttribute('aria-busy', 'false')
@@ -175,6 +200,7 @@ export class SearchPanel {
   }
 
   private renderLoading(): void {
+    this.idle = false
     this.body.setAttribute('aria-busy', 'true')
     const rows = Array.from({ length: 6 }, () =>
       el('li', { class: 'result result--skeleton', attrs: { 'aria-hidden': 'true' } }, [
@@ -189,6 +215,7 @@ export class SearchPanel {
   }
 
   private renderResults(songs: Song[]): void {
+    this.idle = false
     this.body.setAttribute('aria-busy', 'false')
     this.body.replaceChildren(
       el('p', { class: 'results__count', text: `${songs.length} results` }),
