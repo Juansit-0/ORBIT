@@ -27,6 +27,7 @@ export class NowPlaying {
   private readonly emptyText = el('span', { text: 'Nothing in orbit yet' })
   readonly volumeControl: HTMLElement
   readonly stage: HTMLElement
+  private readonly scale = el('div', { class: 'seek-scale', attrs: { 'aria-hidden': 'true' } })
   private seeking = false
   private lastVolume = 80
 
@@ -74,7 +75,7 @@ export class NowPlaying {
         this.source,
       ]),
       el('div', { class: 'deck__controls' }, [
-        this.seek,
+        el('div', { class: 'seek' }, [this.seek, this.scale]),
         el('div', { class: 'transport' }, [this.shuffleButton, this.prevButton, this.playButton, this.nextButton, this.repeatButton]),
       ]),
     ])
@@ -154,6 +155,7 @@ export class NowPlaying {
     setText(this.source, sourceText)
     const duration = state.durationMs || song?.durationMs || 0
     setText(this.total, formatTime(duration))
+    this.scale.style.setProperty('--minutes', String(Math.max(1, duration / 60000)))
     if (!this.seeking) {
       setText(this.elapsed, formatTime(state.currentMs))
       this.seek.max = String(Math.max(1000, Math.floor(duration)))

@@ -54,13 +54,33 @@
 }
 
 .rail {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: var(--paper);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-2);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px var(--rule);
   overflow: hidden;
+}
+
+.rail::before,
+.dock::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--tick), var(--tick)) top left / 9px 1px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) top left / 1px 9px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) top right / 9px 1px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) top right / 1px 9px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom left / 9px 1px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom left / 1px 9px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom right / 9px 1px no-repeat,
+    linear-gradient(var(--tick), var(--tick)) bottom right / 1px 9px no-repeat;
+  opacity: 0.7;
 }
 
 .rail--search {
@@ -118,10 +138,10 @@
   display: none;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1360px) {
   :root {
-    --rail-search: minmax(272px, 312px);
-    --rail-queue: minmax(296px, 340px);
+    --rail-search: minmax(272px, 304px);
+    --rail-queue: minmax(296px, 336px);
   }
 }
 
@@ -157,7 +177,7 @@
     grid-area: panel;
   }
 
-  .app {
+  .app[data-view='queue'] {
     grid-template-rows: auto minmax(0, 1fr) auto auto;
     grid-template-areas:
       'mast'
@@ -166,7 +186,7 @@
       'tabs';
   }
 
-  .app:not([data-view='now']) .dock {
+  .app:not([data-view='queue']) .dock {
     display: none;
   }
 

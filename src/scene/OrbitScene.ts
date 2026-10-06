@@ -213,7 +213,8 @@ export class OrbitScene {
     const worldPerPixel = (2 * CAMERA_DISTANCE * Math.tan((FOV * Math.PI) / 360)) / height
     const cx = rect.left + rect.width / 2 - window.innerWidth / 2
     const cy = rect.top + rect.height / 2 - height / 2
-    const radius = Math.min(rect.width, rect.height) * 0.47 * worldPerPixel
+    const lens = this.anchor.querySelector('.lens')?.getBoundingClientRect()
+    const radius = Math.max(Math.min(rect.width, rect.height) * 0.5, (lens?.width ?? 0) * 0.78) * worldPerPixel
     this.points.position.set(cx * worldPerPixel, -cy * worldPerPixel, 0)
     this.points.scale.setScalar(radius)
     this.material.uniforms.uScale!.value = radius
