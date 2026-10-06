@@ -1093,3 +1093,26 @@
     }
   }
 }
+
+.deck__title {
+  perspective: 600px;
+}
+
+.deck__title .word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.deck__title .char {
+  display: inline-block;
+  transform-origin: 50% 100%;
+}
+
+.queue {
+  position: relative;
+}
+
+.chain .node,
+.waypoint {
+  will-change: auto;
+}
