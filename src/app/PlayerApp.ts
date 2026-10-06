@@ -1,9 +1,10 @@
 import { CommandHistory, type Command } from '../core/CommandHistory.ts'
 import { Playlist, type PlaylistChange, type RemoveResult } from '../core/Playlist.ts'
+import type { LibraryResult, PlaylistLibrary } from '../core/PlaylistLibrary.ts'
 import type { SongNode } from '../core/SongNode.ts'
 import type { Song } from '../core/types.ts'
 import type { PlaybackController, PlaybackNotice } from '../player/PlaybackController.ts'
-import { savePlaylist } from '../services/storage.ts'
+import { saveLibrary } from '../services/storage.ts'
 import { showToast } from '../ui/components/toast.ts'
 import { quoted } from '../ui/format.ts'
 
@@ -13,11 +14,14 @@ export class PlayerApp {
   readonly playlist: Playlist
   readonly playback: PlaybackController
   readonly history = new CommandHistory()
+  readonly library: PlaylistLibrary
 
-  constructor(playlist: Playlist, playback: PlaybackController) {
+  constructor(playlist: Playlist, playback: PlaybackController, library: PlaylistLibrary) {
     this.playlist = playlist
     this.playback = playback
+    this.library = library
     playlist.subscribe((change) => this.persist(change))
+    library.subscribe(() => saveLibrary(library.state()))
     playback.onNotice((notice) => this.announce(notice))
   }
 
@@ -163,9 +167,49 @@ export class PlayerApp {
     })
   }
 
+  switchPlaylist(id: string): LibraryResult {
+    if (id === this.library.activeId) return { ok: true, entry: this.library.active }
+    const result = this.library.switchTo(id)
+    if (result.ok) this.afterLibraryChange(`Switched to ${quoted(result.entry.name)}`)
+    return result
+  }
+
+  createPlaylist(name: string): LibraryResult {
+    const result = this.library.create(name)
+    if (result.ok) this.afterLibraryChange(`Created ${quoted(result.entry.name)}`, 'Search for songs to fill it.')
+    return result
+  }
+
+  renamePlaylist(id: string, name: string): LibraryResult {
+    const before = this.library.list().find((entry) => entry.id === id)?.name
+    const result = this.library.rename(id, name)
+    if (result.ok && before !== result.entry.name) {
+      showToast({ tone: 'success', title: `Renamed to ${quoted(result.entry.name)}` })
+    }
+    return result
+  }
+
+  deletePlaylist(id: string): LibraryResult {
+    const wasActive = id === this.library.activeId
+    const result = this.library.remove(id)
+    if (!result.ok) {
+      showToast({ tone: 'error', title: 'Could not delete the playlist', detail: result.error })
+      return result
+    }
+    if (wasActive) this.afterLibraryChange(`Deleted ${quoted(result.entry.name)}`, `Now playing from ${quoted(this.library.active.name)}.`)
+    else showToast({ tone: 'success', title: `Deleted ${quoted(result.entry.name)}` })
+    return result
+  }
+
+  private afterLibraryChange(title: string, detail?: string): void {
+    this.history.clear()
+    this.playback.syncWithPlaylist()
+    showToast({ tone: 'success', title, detail })
+  }
+
   private persist(change: PlaylistChange): void {
     if (change === 'restore') return
-    savePlaylist(this.playlist.snapshot())
+    saveLibrary(this.library.state())
   }
 
   private announce(notice: PlaybackNotice): void {

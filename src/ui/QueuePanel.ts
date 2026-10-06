@@ -33,7 +33,7 @@ export class QueuePanel {
   private readonly flip = new FlipTracker('nodeId')
   private suppressFlip = false
 
-  constructor(app: PlayerApp) {
+  constructor(app: PlayerApp, library: HTMLElement) {
     this.app = app
     this.summary = el('p', { class: 'rail__meta' })
     this.filter = el('input', {
@@ -52,6 +52,7 @@ export class QueuePanel {
         el('h2', { class: 'rail__title', text: 'Flight plan', attrs: { id: 'queue-heading' } }),
         this.summary,
       ]),
+      el('div', { class: 'library-bar' }, [library]),
       el('div', { class: 'filter' }, [
         el('label', { class: 'visually-hidden', text: 'Filter the flight plan', attrs: { for: 'queue-filter' } }),
         icon('search', 'icon filter__icon'),
