@@ -92,6 +92,13 @@ if (root) {
   const queue = new QueuePanel(app, libraryMenu.button)
   const visualizer = new NodeVisualizer(app)
   visualizer.setExplain(prefs.explain)
+  let listShown = prefs.showList
+  const applyList = (shown: boolean) => {
+    listShown = shown
+    document.documentElement.dataset.list = shown ? 'shown' : 'hidden'
+    visualizer.setVisible(shown)
+  }
+  applyList(listShown)
   const tabs = new MobileTabs(shell)
   const help = createShortcutHelp()
   const toggleLyrics = () => {
@@ -155,6 +162,11 @@ if (root) {
       savePrefs({ radio: enabled })
       if (!enabled) radio.stop(false)
     },
+    showList: listShown,
+    onShowList: (enabled) => {
+      applyList(enabled)
+      savePrefs({ showList: enabled })
+    },
     explain: prefs.explain,
     onExplain: (enabled) => {
       visualizer.setExplain(enabled)
@@ -180,6 +192,12 @@ if (root) {
   compact.addEventListener('change', placeMonitor)
   now.root.addEventListener('scroll', placeMonitor, { passive: true })
   new ResizeObserver(placeMonitor).observe(now.stage)
+  const toggleList = () => {
+    applyList(!listShown)
+    settings.setShowList(listShown)
+    savePrefs({ showList: listShown })
+    showToast({ tone: 'info', title: listShown ? 'Linked list shown' : 'Linked list hidden', detail: listShown ? 'Press V to hide it again.' : 'Press V to show it again.' })
+  }
   const palette = new CommandPalette(app, {
     toggleCinema: () => cinema.toggle(),
     toggleLyrics: () => toggleLyrics(),
@@ -189,6 +207,8 @@ if (root) {
       rail.show('search')
       search.focus()
     },
+    toggleList: () => toggleList(),
+    listShown: () => listShown,
   })
   root.append(shell, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
   mountOrbitCursor()
@@ -223,6 +243,7 @@ if (root) {
       toggleLyrics,
       toggleCinema: () => cinema.toggle(),
       togglePalette: () => palette.toggle(),
+      toggleList: () => toggleList(),
       focusFilter: () => {
         tabs.show('queue')
         queue.focusFilter()

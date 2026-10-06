@@ -44,6 +44,7 @@ export class NodeVisualizer {
   private readonly viewport: HTMLElement
   private readonly explainLine: HTMLElement
   private explainEnabled = false
+  private visible = true
   private order: Entry[] = []
   private explainTimers: number[] = []
   private readonly refs = new Map<string, NodeRefs>()
@@ -83,6 +84,11 @@ export class NodeVisualizer {
     this.render('restore')
   }
 
+  setVisible(visible: boolean): void {
+    this.visible = visible
+    if (!visible) this.stopExplaining()
+  }
+
   setExplain(enabled: boolean): void {
     this.explainEnabled = enabled
     if (!enabled) this.stopExplaining()
@@ -91,7 +97,7 @@ export class NodeVisualizer {
   private render(change: PlaylistChange): void {
     const nodes = this.app.playlist.list.nodes()
     const order = nodes.map((node) => ({ id: node.id, title: node.value.title }))
-    const operation = this.explainEnabled && (change === 'add' || change === 'remove' || change === 'move') ? diffOrder(this.order, order) : null
+    const operation = this.explainEnabled && this.visible && (change === 'add' || change === 'remove' || change === 'move') ? diffOrder(this.order, order) : null
     this.order = order
     const fragment: Node[] = [this.terminal('null', 'start')]
     const alive = new Set<string>()
