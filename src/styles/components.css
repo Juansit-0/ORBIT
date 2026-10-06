@@ -606,6 +606,39 @@
   grid-area: 1 / 1;
 }
 
+.waypoint__clock {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+  pointer-events: none;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+.waypoint__eta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.waypoint[aria-current='true'] .waypoint__eta {
+  display: none;
+}
+
+.rail__metas {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.queue__landing {
+  margin: 0;
+  color: var(--burn-ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 .waypoint__time {
   font-family: var(--font-mono);
   font-size: var(--text-mono);
@@ -641,8 +674,8 @@
     pointer-events: auto;
   }
 
-  .waypoint:hover .waypoint__time,
-  .waypoint:focus-within .waypoint__time {
+  .waypoint:hover .waypoint__clock,
+  .waypoint:focus-within .waypoint__clock {
     opacity: 0;
   }
 
