@@ -51,16 +51,17 @@ const PREFS_KEY = 'orbit:v1:prefs'
 
 export interface Prefs {
   volume: number
+  vinyl: boolean
 }
 
 export function loadPrefs(): Prefs {
   const value = readJson<Partial<Prefs>>(PREFS_KEY)
   const volume = typeof value?.volume === 'number' && value.volume >= 0 && value.volume <= 100 ? value.volume : 80
-  return { volume }
+  return { volume, vinyl: value?.vinyl === true }
 }
 
-export function savePrefs(prefs: Prefs): void {
-  writeJson(PREFS_KEY, prefs)
+export function savePrefs(patch: Partial<Prefs>): void {
+  writeJson(PREFS_KEY, { ...loadPrefs(), ...patch })
 }
 
 const LIBRARY_KEY = 'orbit:v1:library'

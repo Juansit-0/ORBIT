@@ -3,6 +3,7 @@ import type { PlaybackState } from '../player/PlaybackController.ts'
 import { el, setText, toggleAttr } from './dom.ts'
 import { formatTime } from './format.ts'
 import { icon } from './icons.ts'
+import { LiquidProgress } from './LiquidProgress.ts'
 import { cascadeText, fadeSwap, magnetize } from './motion.ts'
 
 export class NowPlaying {
@@ -29,6 +30,7 @@ export class NowPlaying {
   readonly stage: HTMLElement
   readonly lyricsButton: HTMLButtonElement
   private readonly scale = el('div', { class: 'seek-scale', attrs: { 'aria-hidden': 'true' } })
+  private readonly liquid = new LiquidProgress()
   private seeking = false
   private lastVolume = 80
 
@@ -80,7 +82,7 @@ export class NowPlaying {
         el('div', { class: 'deck__tags' }, [this.source, this.lyricsButton]),
       ]),
       el('div', { class: 'deck__controls' }, [
-        el('div', { class: 'seek' }, [this.seek, this.scale]),
+        el('div', { class: 'seek' }, [el('div', { class: 'seek__bar' }, [this.liquid.canvas, this.seek]), this.scale]),
         el('div', { class: 'transport' }, [this.shuffleButton, this.prevButton, this.playButton, this.nextButton, this.repeatButton]),
       ]),
     ])
@@ -166,7 +168,9 @@ export class NowPlaying {
       this.seek.max = String(Math.max(1000, Math.floor(duration)))
       this.seek.value = String(Math.floor(state.currentMs))
     }
-    this.seek.style.setProperty('--fill', `${duration > 0 ? Math.min(100, (Number(this.seek.value) / duration) * 100) : 0}%`)
+    const fraction = duration > 0 ? Math.min(1, Number(this.seek.value) / duration) : 0
+    this.seek.style.setProperty('--fill', `${fraction * 100}%`)
+    this.liquid.update(fraction, state.status === 'playing')
     toggleAttr(this.seek, 'disabled', state.source === null)
     this.seek.setAttribute('aria-valuetext', `${formatTime(state.currentMs)} of ${formatTime(duration)}`)
     this.playButton.replaceChildren(icon(playing ? 'pause' : 'play', 'icon play__icon'))

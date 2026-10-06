@@ -2,7 +2,7 @@ import type { PlayerApp } from '../app/PlayerApp.ts'
 import type { SongNode } from '../core/SongNode.ts'
 import { el, setText } from './dom.ts'
 import { formatTime } from './format.ts'
-import { drawLinks, FlipTracker, popIn } from './motion.ts'
+import { drawLinks, FlipTracker, popIn, travel } from './motion.ts'
 import type { PlaylistChange } from '../core/Playlist.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -39,6 +39,7 @@ export class NodeVisualizer {
   private readonly size: HTMLElement
   private readonly pointers: HTMLElement
   private readonly now: HTMLElement
+  private readonly viewport: HTMLElement
   private readonly refs = new Map<string, NodeRefs>()
   private lastCurrent: string | null = null
   private readonly flip = new FlipTracker('nodeId')
@@ -58,7 +59,7 @@ export class NodeVisualizer {
           el('span', { class: 'legend legend--prev', text: 'prev' }),
         ]),
       ]),
-      el('div', { class: 'dock__viewport' }, [this.track]),
+      (this.viewport = el('div', { class: 'dock__viewport' }, [this.track])),
       this.now,
     ])
     app.playlist.subscribe((change) => this.render(change))
@@ -154,6 +155,11 @@ export class NodeVisualizer {
       refs.item.dataset.playing = String(active && playing)
       if (active) refs.button.setAttribute('aria-current', 'true')
       else refs.button.removeAttribute('aria-current')
+    }
+    if (current && this.lastCurrent && current !== this.lastCurrent) {
+      const from = this.refs.get(this.lastCurrent)?.item
+      const to = this.refs.get(current)?.item
+      if (from?.isConnected && to?.isConnected) travel(this.viewport, this.track, from, to)
     }
     if (current && current !== this.lastCurrent) {
       this.refs.get(current)?.item.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest', inline: 'center' })
