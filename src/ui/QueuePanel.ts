@@ -1,5 +1,6 @@
 import type { PlayerApp } from '../app/PlayerApp.ts'
 import type { SongNode } from '../core/SongNode.ts'
+import { enableDragReorder } from './dragReorder.ts'
 import { el, setText, toggleAttr } from './dom.ts'
 import { formatTime, plural } from './format.ts'
 import { icon } from './icons.ts'
@@ -55,6 +56,12 @@ export class QueuePanel {
       el('div', { class: 'rail__body' }, [this.list, this.noMatch, this.empty]),
     ])
     this.filter.addEventListener('input', () => this.applyFilter())
+    enableDragReorder({
+      list: this.list,
+      handleSelector: '.waypoint__pos',
+      itemSelector: '.waypoint',
+      onDrop: (from, to) => this.app.move(from, to),
+    })
     app.playlist.subscribe(() => this.render())
     app.playback.subscribe(() => this.renderCurrent())
     this.render()
@@ -105,7 +112,7 @@ export class QueuePanel {
   private createRow(node: SongNode): RowRefs {
     const refs: RowRefs = {
       row: el('li', { class: 'waypoint', attrs: { 'data-node-id': node.id } }),
-      position: el('span', { class: 'waypoint__pos', attrs: { 'aria-hidden': 'true' } }),
+      position: el('span', { class: 'waypoint__num' }),
       cover: el('img', { class: 'waypoint__cover', attrs: { alt: '', width: 40, height: 40, loading: 'lazy', decoding: 'async' } }),
       title: el('span', { class: 'waypoint__title' }),
       artist: el('span', { class: 'waypoint__artist' }),
@@ -118,7 +125,10 @@ export class QueuePanel {
     }
     refs.main.append(refs.cover, el('span', { class: 'waypoint__text' }, [refs.title, refs.artist, refs.status]))
     refs.row.append(
-      refs.position,
+      el('span', { class: 'waypoint__pos', attrs: { 'aria-hidden': 'true', title: 'Drag to reorder' } }, [
+        refs.position,
+        icon('grip', 'icon waypoint__grip'),
+      ]),
       refs.main,
       refs.time,
       el('span', { class: 'waypoint__actions' }, [refs.up, refs.down, refs.remove]),

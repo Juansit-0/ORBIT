@@ -591,9 +591,11 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: min(100%, 380px);
+  flex: 1 1 0;
+  min-height: 150px;
+  max-height: 380px;
+  max-width: 100%;
   aspect-ratio: 1;
-  max-height: 42svh;
 }
 
 .deck__stage::before,
@@ -616,7 +618,7 @@
 
 .lens {
   position: relative;
-  width: min(240px, 62%);
+  width: min(240px, 63%);
   aspect-ratio: 1;
   margin: 0;
   border-radius: 28px;
@@ -884,8 +886,8 @@
 .volume {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  width: min(100%, 200px);
+  gap: var(--space-1);
+  width: 168px;
 }
 
 .volume .icon-button {
@@ -1010,8 +1012,11 @@
   }
 
   .deck__stage {
-    width: min(100%, 300px);
-    max-height: 36svh;
+    max-height: 300px;
+  }
+
+  .volume {
+    width: 128px;
   }
 
   .play {
