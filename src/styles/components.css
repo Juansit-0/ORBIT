@@ -1151,12 +1151,6 @@
   }
 }
 
-@keyframes signal {
-  50% {
-    opacity: 0.25;
-  }
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);

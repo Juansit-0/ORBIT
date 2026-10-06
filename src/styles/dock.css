@@ -280,24 +280,8 @@
   border-radius: var(--radius-sm);
 }
 
-.terminal__arrow {
-  display: none;
-}
-
-.terminal--start .terminal__arrow {
-  color: var(--chart);
-}
-
 .chain[data-empty='true'] .terminal--end {
   display: none;
-}
-
-.chain[data-empty='true'] .terminal__arrow {
-  display: none;
-}
-
-.terminal--start .terminal__arrow {
-  color: var(--ink-3);
 }
 
 .waypoint__pos {

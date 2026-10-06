@@ -98,7 +98,6 @@ export class NodeVisualizer {
 
   private terminal(text: string, side: 'start' | 'end'): HTMLLIElement {
     return el('li', { class: `terminal terminal--${side}`, attrs: { 'aria-hidden': 'true' } }, [
-      el('span', { class: 'terminal__arrow', text: side === 'start' ? 'prev' : 'next' }),
       el('span', { class: 'terminal__null', text }),
     ])
   }
