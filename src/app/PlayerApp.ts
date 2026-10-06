@@ -21,15 +21,15 @@ export class PlayerApp {
     playback.onNotice((notice) => this.announce(notice))
   }
 
-  addFirst(song: Song): void {
+  async addFirst(song: Song): Promise<void> {
     const duplicate = this.playlist.containsSong(song.id)
-    void this.history.run(this.insertCommand(0, song, `Add ${quoted(song.title)} first`))
+    await this.history.run(this.insertCommand(() => 0, song, `Add ${quoted(song.title)} first`))
     this.confirmAdd(song, 1, duplicate)
   }
 
-  addLast(song: Song): void {
+  async addLast(song: Song): Promise<void> {
     const duplicate = this.playlist.containsSong(song.id)
-    void this.history.run(this.insertCommand(this.playlist.size, song, `Add ${quoted(song.title)} last`))
+    await this.history.run(this.insertCommand(() => this.playlist.size, song, `Add ${quoted(song.title)} last`))
     this.confirmAdd(song, this.playlist.size, duplicate)
   }
 
@@ -39,8 +39,9 @@ export class PlayerApp {
       return { ok: false, error: max === 1 ? 'The list is empty, so the only position is 1.' : `Choose a position from 1 to ${max}.` }
     }
     const duplicate = this.playlist.containsSong(song.id)
-    void this.history.run(this.insertCommand(position - 1, song, `Insert ${quoted(song.title)} at ${position}`))
-    this.confirmAdd(song, position, duplicate)
+    void this.history
+      .run(this.insertCommand(() => position - 1, song, `Insert ${quoted(song.title)} at ${position}`))
+      .then(() => this.confirmAdd(song, position, duplicate))
     return { ok: true, position }
   }
 
@@ -75,10 +76,10 @@ export class PlayerApp {
     })
   }
 
-  move(fromIndex: number, toIndex: number): void {
+  async move(fromIndex: number, toIndex: number): Promise<void> {
     if (fromIndex === toIndex || toIndex < 0 || toIndex >= this.playlist.size) return
     const title = this.playlist.list.get(fromIndex)?.title ?? 'song'
-    void this.history.run({
+    await this.history.run({
       label: `Move ${quoted(title)} to ${toIndex + 1}`,
       execute: () => this.playlist.move(fromIndex, toIndex),
       revert: () => this.playlist.move(toIndex, fromIndex),
@@ -96,11 +97,13 @@ export class PlayerApp {
     showToast({ tone: 'info', title: command ? `Redid: ${command.label}` : 'Nothing to redo' })
   }
 
-  private insertCommand(index: number, song: Song, label: string): Command {
+  private insertCommand(target: () => number, song: Song, label: string): Command {
     let node: SongNode | null = null
+    let index = -1
     return {
       label,
       execute: () => {
+        if (index === -1) index = Math.min(target(), this.playlist.size)
         node = node ? this.playlist.insertNodeAt(index, node) : this.playlist.insertAt(index, song)
       },
       revert: async () => {

@@ -71,15 +71,35 @@ describe('CommandHistory', () => {
     expect(history.canUndo).toBe(false)
   })
 
-  it('ignores reentrant undo while a revert is pending', async () => {
+  it('queues rapid undo calls instead of dropping them', async () => {
     const history = new CommandHistory()
+    const order: string[] = []
     let release: () => void = () => {}
-    history.record({ label: 'slow', execute: () => {}, revert: () => new Promise<void>((r) => (release = r)) })
-    history.record({ label: 'fast', execute: () => {}, revert: () => {} })
-    await history.undo()
-    const pending = history.undo()
-    expect(await history.undo()).toBeNull()
+    history.record({ label: 'first', execute: () => {}, revert: () => void order.push('first') })
+    history.record({
+      label: 'slow',
+      execute: () => {},
+      revert: () => new Promise<void>((resolve) => (release = () => {
+        order.push('slow')
+        resolve()
+      })),
+    })
+    const a = history.undo()
+    const b = history.undo()
+    const c = history.undo()
+    await Promise.resolve()
     release()
-    expect((await pending)?.label).toBe('slow')
+    expect((await a)?.label).toBe('slow')
+    expect((await b)?.label).toBe('first')
+    expect(await c).toBeNull()
+    expect(order).toEqual(['slow', 'first'])
+  })
+
+  it('keeps working after a command throws', async () => {
+    const history = new CommandHistory()
+    await expect(history.run({ label: 'bad', execute: () => { throw new Error('x') }, revert: () => {} })).rejects.toThrow('x')
+    expect(history.canUndo).toBe(false)
+    await history.run({ label: 'ok', execute: () => {}, revert: () => {} })
+    expect(history.undoLabel).toBe('ok')
   })
 })
