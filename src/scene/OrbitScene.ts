@@ -437,7 +437,7 @@ export class OrbitScene {
     const cx = rect.left + rect.width / 2 - window.innerWidth / 2
     const cy = rect.top + rect.height / 2 - height / 2
     const lens = this.anchor.querySelector('.lens')?.getBoundingClientRect()
-    const radius = Math.max(Math.min(rect.width, rect.height) * 0.5, (lens?.width ?? 0) * 0.78) * worldPerPixel
+    const radius = Math.max(Math.min(rect.width, rect.height) * 0.42, (lens?.width ?? 0) * 0.7) * worldPerPixel
     const target = { x: cx * worldPerPixel, y: -cy * worldPerPixel, radius }
     if (!this.placed) this.placed = target
     const follow = 1 - Math.exp(-delta * 3.2)
@@ -496,7 +496,7 @@ export class OrbitScene {
     this.updateTrail()
     this.parallax.x += (Math.max(-1, Math.min(1, this.pointer.x)) * 0.12 - this.parallax.x) * Math.min(1, delta * 2)
     this.parallax.y += (Math.max(-1, Math.min(1, this.pointer.y)) * 0.08 - this.parallax.y) * Math.min(1, delta * 2)
-    this.points.rotation.y += delta * (0.05 + this.energy * 0.07)
+    this.points.rotation.y += delta * (0.035 + this.energy * 0.04)
     this.points.rotation.x = Math.sin(elapsed * 0.11) * 0.12 + this.parallax.y
     this.points.rotation.z = this.parallax.x * 0.5
     this.camera.position.x = Math.sin(elapsed * 0.07) * 0.05
