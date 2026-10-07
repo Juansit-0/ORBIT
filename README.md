@@ -34,7 +34,7 @@ The linked list dock in the interface draws the live structure: `null`, `HEAD`, 
 - Radio of similar songs when the flight plan ends, share links, export and import
 - Interactive particle planet that reacts to the music: cursor trail, click shockwave, cover that dissolves into the planet and colours taken from the cover
 - Smooth volume transitions
-- Auto DJ (`D`): each song fades into the next in its last 8 seconds while the planet spins up for the handover
+- Auto DJ (`D`): each song fades into the next in its last 8 seconds while the planet spins up for the handover, and an optional voice announces the next song
 - Top charts of your country when the search is empty, ready to play or add
 - Installable as an app, and the interface opens offline after the first visit
 - Make a mix: type an artist, a genre or a song and Orbit builds a new playlist of up to 20 songs around it

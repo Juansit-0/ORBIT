@@ -18,6 +18,7 @@ import { PreviewPlayer } from './player/PreviewPlayer.ts'
 import { SleepTimer } from './player/SleepTimer.ts'
 import { VolumeFader } from './player/VolumeFader.ts'
 import { DjMix, mixProgress } from './player/DjMix.ts'
+import { browserSpeaker, DjVoice } from './player/DjVoice.ts'
 import { YouTubePlayer } from './player/YouTubePlayer.ts'
 import { resolveVideoIds } from './services/resolveService.ts'
 import { mountScene } from './scene/mountScene.ts'
@@ -164,6 +165,8 @@ if (root) {
     if (label) label.textContent = state.mixing ? 'Mixing' : 'Auto DJ'
   })
   now.tags.append(djChip)
+  const speaker = browserSpeaker()
+  const djVoice = speaker ? new DjVoice(playback, playlist, speaker, prefs.djVoice) : null
   let cinemaDelay = prefs.cinemaDelay
   let cinemaFullscreen = prefs.cinemaFullscreen
   const cinema = new CinemaMode(app, { delayMs: () => cinemaDelay, fullscreen: () => cinemaFullscreen })
@@ -182,6 +185,11 @@ if (root) {
     onCinemaFullscreen: (enabled) => {
       cinemaFullscreen = enabled
       savePrefs({ cinemaFullscreen: enabled })
+    },
+    djVoice: djVoice ? djVoice.enabled : null,
+    onDjVoice: (enabled) => {
+      djVoice?.setEnabled(enabled)
+      savePrefs({ djVoice: enabled })
     },
     smoothVolume: prefs.smoothVolume,
     onSmoothVolume: (enabled) => {

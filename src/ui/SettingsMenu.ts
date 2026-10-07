@@ -16,6 +16,8 @@ export interface SettingsOptions {
   onRadio: (enabled: boolean) => void
   smoothVolume: boolean
   onSmoothVolume: (enabled: boolean) => void
+  djVoice: boolean | null
+  onDjVoice: (enabled: boolean) => void
 }
 
 const DELAYS: { label: string; value: number | null }[] = [
@@ -66,6 +68,9 @@ export class SettingsMenu {
       toggle('setting-fullscreen', 'Full screen in player mode', 'Applies when you enter player mode with O or the button.', options.cinemaFullscreen, options.onCinemaFullscreen),
       toggle('setting-vinyl', 'Spin the cover like a vinyl', 'The cover turns into a spinning record while music plays, and its particles spin with it.', options.vinyl, options.onVinyl),
       toggle('setting-smooth', 'Smooth volume transitions', 'Fade the music out and in when you pause, resume or change songs.', options.smoothVolume, options.onSmoothVolume),
+      options.djVoice === null
+        ? ''
+        : toggle('setting-dj-voice', 'Announce the next song', 'When Auto DJ mixes into the next song, a voice says what comes next.', options.djVoice, options.onDjVoice),
       toggle('setting-radio', 'Offer radio at the end', 'When the flight plan ends, offer to keep playing similar songs without adding them.', options.radio, options.onRadio),
       (this.nested = el('div', { class: 'settings__list' }, [
         toggle('setting-list', 'Show linked list', 'The panel under the player with HEAD, TAIL, every node and its next and prev pointers. Press V any time.', options.showList, (value) => {
