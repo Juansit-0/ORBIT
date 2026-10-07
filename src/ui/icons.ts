@@ -38,6 +38,7 @@ const PATHS = {
   share: `<path ${STROKE} d="M8.6 13.4 15.4 17M15.4 7 8.6 10.6M18 8.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM6 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM18 20.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>`,
   download: `<path ${STROKE} d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/>`,
   upload: `<path ${STROKE} d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 19.5h14"/>`,
+  dj: `<circle ${STROKE} cx="10" cy="12" r="6.5"/><circle cx="10" cy="12" r="1.6" fill="currentColor"/><path ${STROKE} d="M18.5 4.5v9.2l-2.6 2.6"/>`,
   more: '<circle cx="5.5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="18.5" cy="12" r="1.7" fill="currentColor"/>',
   music: `<path ${STROKE} d="M9 18.5V6.2l10-2v12.3M9 18.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM19 16.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM9 10l10-2"/>`,
 } as const

@@ -402,3 +402,96 @@ describe('PlaybackController', () => {
     expect(playlist.list.head?.value.unavailable).toBe(true)
   })
 })
+
+describe('DJ mix', () => {
+  function manualClock() {
+    let time = 0
+    let pending: (() => void)[] = []
+    return {
+      clock: {
+        now: () => time,
+        schedule: (callback: () => void) => {
+          pending.push(callback)
+          return pending.length
+        },
+        cancel: () => {
+          pending = []
+        },
+      },
+      advance(ms: number) {
+        time += ms
+        const run = pending
+        pending = []
+        for (const callback of run) callback()
+      },
+    }
+  }
+
+  let playlist: Playlist
+  let full: StubPlayer
+  let controller: PlaybackController
+  let manual: ReturnType<typeof manualClock>
+
+  beforeEach(async () => {
+    playlist = new Playlist()
+    for (const id of ['a', 'b', 'c']) playlist.addLast({ ...song(id), durationMs: 200000 })
+    full = new StubPlayer()
+    manual = manualClock()
+    controller = new PlaybackController(playlist, {
+      full,
+      preview: new StubPlayer(),
+      resolve: async (s: Song) => [`v-${s.id}`],
+      mixFader: new VolumeFader(manual.clock),
+    })
+    await controller.togglePlay()
+  })
+
+  it('fades the song out, moves to the next one and fades it in', async () => {
+    const mixed = controller.mixToNext(8000)
+    expect(controller.state.mixing).toBe(true)
+    manual.advance(4000)
+    expect(full.volume).toBeGreaterThan(0)
+    expect(full.volume).toBeLessThan(80)
+    manual.advance(4000)
+    expect(await mixed).toBe(true)
+    expect(playlist.current?.value.id).toBe('b')
+    expect(full.loaded?.videoId).toBe('v-b')
+    expect(controller.state.mixing).toBe(false)
+    expect(full.volume).toBe(0)
+    manual.advance(2500)
+    expect(full.volume).toBe(80)
+  })
+
+  it('cancels and restores the volume when the listener seeks or pauses', async () => {
+    const mixed = controller.mixToNext(8000)
+    manual.advance(4000)
+    controller.seek(1000)
+    expect(await mixed).toBe(false)
+    expect(full.volume).toBe(80)
+    expect(playlist.current?.value.id).toBe('a')
+    const again = controller.mixToNext(8000)
+    manual.advance(2000)
+    controller.pause()
+    expect(await again).toBe(false)
+    expect(full.volume).toBe(80)
+    expect(controller.state.mixing).toBe(false)
+  })
+
+  it('restores the volume when the plan ends during a mix', async () => {
+    await controller.next()
+    await controller.next()
+    await flush()
+    expect(playlist.current?.value.id).toBe('c')
+    const mixed = controller.mixToNext(8000)
+    manual.advance(8000)
+    await mixed
+    expect(full.volume).toBe(80)
+  })
+
+  it('does not start twice or while paused', async () => {
+    void controller.mixToNext(8000)
+    expect(await controller.mixToNext(8000)).toBe(false)
+    controller.pause()
+    expect(await controller.mixToNext(8000)).toBe(false)
+  })
+})
