@@ -274,9 +274,9 @@ Three inks on paper: navy for words and structure, burn orange for the one thing
 
 ## Layout
 
-Desktop is a three-column chart table on a full-height viewport (no page scroll): a search rail on the left (300 to 360px), the deck in the center, the flight plan rail on the right (320 to 392px), a masthead row across the top, and the linked list dock under the deck. Gutters and outer padding are 16px. Below 1360px the rails narrow (272 to 304px and 296 to 336px).
+Desktop is a two-column central stage on a full-height viewport (no page scroll): the deck fills the left column and the flight plan rail sits on the right (`--rail-queue: clamp(380px, 34vw, 460px)`, 320 to 360px below 1100px). A masthead row spans both columns. Search lives in the masthead, centred over the stage column, and opens as a popover over the stage. The optional linked list dock sits under the deck. There is no left rail. Gutters and outer padding are 16px. While the search popover is open on desktop, the deck dims to 40%.
 
-At 920px and below the layout collapses to one panel at a time switched by a bottom pill tab bar (Search, Now, Flight plan); gutters tighten to 12px. The dock appears only with the flight plan view, stacked under the queue. Below 420px the masthead flight summary is hidden; below 480px waypoint rows tighten and the duration moves inline under the title.
+At 920px and below the layout collapses to one panel at a time, switched by a bottom pill tab bar (Search, Now, Flight plan); gutters tighten to 12px. In the Search view the field and its results fill the panel. The dock appears only with the flight plan view, stacked under the queue. Below 480px waypoint rows tighten, the duration moves inline under the title and the start-time column is hidden.
 
 Spacing follows a 4px base scale (4, 8, 12, 16, 24, 32, 48). Panel headers sit on 24px insets; row content on 8 to 12px. The deck centers its stack (cover lens, mission clock, title, artist, source badge, progress, transport) with 24px gaps, tightening to 12px on short desktop viewports.
 
@@ -330,11 +330,26 @@ A 72px burn orange disc (64px on mobile) with a navy 30px glyph and the Burn Glo
 - **Error:** Danger border with a 3px Danger Wash halo and a bold Danger message below.
 
 ### Navigation
-- **Masthead:** wordmark with the orbit glyph in Burn Press, a live flight summary in Ink Two at 0.875rem, utility icon buttons and the volume slider on the right.
+- **Masthead:** wordmark with the orbit glyph in Burn Press on the left, the search field centred over the stage, and on the right undo, redo, player mode, the volume slider and a More button.
+- **More menu:** a Chart Paper popover with the hairline ring and Lifted shadow, holding 44px rows with a 20px icon and label (Sleep timer, Settings, Keyboard shortcuts). An active sleep timer shows its countdown as a Burn badge on the More button.
 - **Mobile tabs:** three equal pill tabs inside a Chart Paper pill bar with the Floating shadow; the active tab is a navy ink pill with paper text.
 
 ### Waypoint Row (signature)
 Each queued song is a 12px rounded row: a mono two-digit position, a chart dot on the continuous spine, a 40px artwork thumbnail, title and artist, and a mono duration. Hover or focus tints the row Sky and swaps the duration for up and down move buttons on fine pointers; the position number swaps for a drag grip. The current row is Burn Wash with a Burn Ink number and a 14px burn dot that pulses while playing. Remove sits apart from the move buttons, separated by empty space.
+
+The rail header puts the "Flight plan" title and the playlist picker on one line, with one Ink Two summary line under it: song count, total time and, while playing, "Lands at 15:39". While playing, each upcoming row stacks its duration over its start time (mono 0.6875rem, Ink Two, 24 hour English clock). The current row shows no start time.
+
+### Search Popover
+Anchored under the masthead field, as wide as the field, up to 70svh tall, Chart Paper with 16px corners, the hairline ring and Lifted shadow. Escape or a click outside closes it. With an empty field it shows "Recently played" (with Clear) and then "Top charts · <country name>": the top 10 with mono ranks in Ink Two and a quiet "Show all" button. Section titles are Unbounded 600 at 1rem in Ink. Rows are 56px: a 24px rank column, a 40px cover, then title and "artist · length". On wide panels (container 440px and up) a row's actions (Play, Next, First, Last, At #) appear on hover or focus as an overlay on the right with a Sky fade, and the title ellipsizes before it. Touch screens always show the actions on their own line, with Play in the quiet Mist fill.
+
+### Lyrics
+Opened from the Lyrics chip, the block sits under the song title on the stage, up to 560px wide and 8.5 to 12.5rem tall (6.5 to 9rem on viewports under 820px tall). Lines are Hanken Grotesk 500 at 1.125rem, centred, in Ink Three. The active line is Ink 600 with a small burn dot, held at about 35% of the block height. The bottom of the block fades out.
+
+### Video Monitor
+While a full track plays from YouTube, the monitor is a flush footer of the flight plan rail: a hairline top rule, a caption line with the source and the 200px tall video. The queue list above it ends with a 24px fade. On phones it sits over the cover lens at 200 by 200px.
+
+### Deck Chips
+The source ("Full track", "30 s preview") is plain Ink Two caption text, not a chip. Toggle chips (Lyrics, Live sound) are paper pills with a hairline ring; pressed, they take Burn Wash with Burn Ink, like shuffle and repeat. The artist is one line with an ellipsis, with the album on a smaller Ink Three line under it.
 
 ### List Node Chain (signature)
 The dock plots the list from a null terminal to a null terminal. Each node is a Chart Paper card with 12px corners and a Mist Strong border whose width grows with song duration (minimum 30px); container queries drop the title below 120px, stack index and time below 64px and hide the time below 42px. Between nodes, a paired arrow draws next in Navy Ink and prev in Chart Blue, matching the legend. HEAD and TAIL tags sit above the end nodes in Burn Ink mono. The current node takes the Burn border, Burn Wash fill and Low shadow, and a mono line below names it.

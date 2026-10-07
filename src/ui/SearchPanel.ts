@@ -11,6 +11,14 @@ import { chartSongs, countryFromLocale } from '../services/chartsService.ts'
 
 const CHARTS_PREVIEW = 10
 
+function regionName(country: string): string {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(country.toUpperCase()) ?? country.toUpperCase()
+  } catch {
+    return country.toUpperCase()
+  }
+}
+
 const DEBOUNCE_MS = 350
 
 export class SearchPanel {
@@ -178,7 +186,7 @@ export class SearchPanel {
   }
 
   private renderCharts(): HTMLElement {
-    const heading = el('h2', { class: 'finder__section-title', text: `Top charts · ${this.country.toUpperCase()}`, attrs: { id: 'charts-heading' } })
+    const heading = el('h2', { class: 'finder__section-title', text: `Top charts · ${regionName(this.country)}`, attrs: { id: 'charts-heading' } })
     const head = el('header', { class: 'finder__section-head' }, [heading])
     const section = el('section', { class: 'finder__section finder__charts', attrs: { 'aria-labelledby': 'charts-heading' } }, [head])
     const charts = this.charts

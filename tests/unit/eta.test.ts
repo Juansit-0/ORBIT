@@ -60,7 +60,8 @@ describe('etaFor', () => {
     expect(result.landsAt).toBeNull()
   })
 
-  it('formats clock times', () => {
-    expect(formatClock(Date.UTC(2026, 0, 1, 15, 7), 'en-GB').length).toBeGreaterThanOrEqual(4)
+  it('formats clock times as 24 hour English time', () => {
+    expect(formatClock(new Date(2026, 0, 1, 15, 7).getTime())).toBe('15:07')
+    expect(formatClock(new Date(2026, 0, 1, 9, 5).getTime())).toBe('09:05')
   })
 })

@@ -45,8 +45,8 @@ export class QueuePanel {
 
   constructor(app: PlayerApp, library: HTMLElement) {
     this.app = app
-    this.summary = el('p', { class: 'rail__meta' })
-    this.landing = el('p', { class: 'queue__landing', attrs: { hidden: true } })
+    this.summary = el('span', { class: 'rail__meta' })
+    this.landing = el('span', { class: 'queue__landing', attrs: { hidden: true } })
     this.filter = el('input', {
       class: 'filter__input',
       attrs: { id: 'queue-filter', type: 'search', placeholder: 'Filter the flight plan', autocomplete: 'off' },
@@ -61,9 +61,9 @@ export class QueuePanel {
     this.root = el('aside', { class: 'rail rail--queue', attrs: { id: 'panel-queue', 'aria-labelledby': 'queue-heading' } }, [
       el('header', { class: 'rail__head' }, [
         el('h2', { class: 'rail__title', text: 'Flight plan', attrs: { id: 'queue-heading' } }),
-        el('div', { class: 'rail__metas' }, [this.summary, this.landing]),
+        library,
       ]),
-      el('div', { class: 'library-bar' }, [library]),
+      el('p', { class: 'rail__summary' }, [this.summary, this.landing]),
       el('div', { class: 'filter' }, [
         el('label', { class: 'visually-hidden', text: 'Filter the flight plan', attrs: { for: 'queue-filter' } }),
         icon('search', 'icon filter__icon'),
