@@ -1,8 +1,7 @@
+import { primaryArtist } from '../core/artist.ts'
 import type { Song } from '../core/types.ts'
 
-export function primaryArtist(artist: string): string {
-  return artist.split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bx\b|\bwith\b)\s*/i)[0]?.trim() || artist
-}
+export { primaryArtist }
 
 function key(song: Song): string {
   return `${song.title.toLowerCase().replace(/\s*[([].*?[)\]]/g, '').trim()}::${primaryArtist(song.artist).toLowerCase()}`
