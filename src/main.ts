@@ -39,6 +39,7 @@ import { QueuePanel } from './ui/QueuePanel.ts'
 import { LibraryMenu } from './ui/LibraryMenu.ts'
 import { LyricsPanel } from './ui/LyricsPanel.ts'
 import { MoreMenu } from './ui/MoreMenu.ts'
+import { MixDialog } from './ui/MixDialog.ts'
 import { SearchPanel } from './ui/SearchPanel.ts'
 import { mountOrbitCursor } from './ui/OrbitCursor.ts'
 import { CinemaMode } from './ui/CinemaMode.ts'
@@ -98,6 +99,8 @@ if (root) {
   const liveChip = createLiveSoundChip(reactor)
   if (liveChip) now.tags.append(liveChip)
   const libraryMenu = new LibraryMenu(app)
+  const mix = new MixDialog(app)
+  libraryMenu.onMix = () => mix.open()
   const queue = new QueuePanel(app, libraryMenu.button)
   const visualizer = new NodeVisualizer(app)
   visualizer.setExplain(prefs.explain)
@@ -247,8 +250,9 @@ if (root) {
     recent: () => played.entries().map((entry) => entry.song),
     toggleDj,
     djOn: () => dj.enabled,
+    makeMix: () => mix.open(),
   })
-  root.append(shell, more.panel, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
+  root.append(shell, mix.dialog, more.panel, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
   mountOrbitCursor()
   mountToasts(document.body)
   const sharedParam = new URLSearchParams(location.search).get('plan')
