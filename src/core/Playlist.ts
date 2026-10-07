@@ -2,6 +2,11 @@ import { DoublyLinkedList } from './DoublyLinkedList.ts'
 import type { ListNode } from './ListNode.ts'
 import type { SongNode } from './SongNode.ts'
 import type { RepeatMode, Song } from './types.ts'
+import { artistKey } from './artist.ts'
+import { insertionSlots, spreadShuffle } from './spreadShuffle.ts'
+
+const artistOfNode = (node: SongNode) => artistKey(node.value.artist)
+const genreOfNode = (node: SongNode) => node.value.genre
 
 export type PlaylistChange = 'add' | 'remove' | 'move' | 'select' | 'mode' | 'update' | 'restore' | 'clear'
 
@@ -224,7 +229,10 @@ export class Playlist {
     if (this.order) {
       const anchor = this.current ? this.orderEntryOf(this.current) : null
       const start = anchor ? this.order.indexOf(anchor) + 1 : 0
-      const index = start + Math.floor(this.random() * (this.order.size - start + 1))
+      const slots = insertionSlots(this.order.toArray(), start, node, artistOfNode)
+      const index = slots.length > 0
+        ? (slots[Math.floor(this.random() * slots.length)] as number)
+        : start + Math.floor(this.random() * (this.order.size - start + 1))
       this.order.insertAt(index, node)
     }
     this.emit('add')
@@ -232,13 +240,10 @@ export class Playlist {
   }
 
   private buildShuffleOrder(): DoublyLinkedList<SongNode> {
-    const rest = this.list.nodes().filter((node) => node !== this.current)
-    for (let i = rest.length - 1; i > 0; i--) {
-      const j = Math.floor(this.random() * (i + 1))
-      const swap = rest[i] as SongNode
-      rest[i] = rest[j] as SongNode
-      rest[j] = swap
-    }
+    const rest = spreadShuffle(
+      this.list.nodes().filter((node) => node !== this.current),
+      { artistOf: artistOfNode, genreOf: genreOfNode, random: this.random, after: this.current },
+    )
     const order = new DoublyLinkedList<SongNode>()
     if (this.current) order.addLast(this.current)
     for (const node of rest) order.addLast(node)

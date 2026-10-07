@@ -9,6 +9,7 @@ A music player built in TypeScript on top of a doubly linked list. Search any so
 | `src/core/ListNode.ts` | Node with `value`, `prev` and `next` |
 | `src/core/DoublyLinkedList.ts` | `addFirst`, `addLast`, `insertAt`, `insertNodeAt`, `removeAt`, `removeNode`, `removeById`, `move`, `getNode` (walks from the closest end), forward and reverse traversal |
 | `src/core/Playlist.ts` | Current song pointer, `next` and `previous` through the links, removing the playing song, repeat modes, shuffle order kept in a second linked list so the real order never changes |
+| `src/core/spreadShuffle.ts` | Smart shuffle: never the same artist twice in a row when it can be avoided, and a different genre when possible |
 | `src/core/CommandHistory.ts` | Undo and redo stacks built on the same list |
 | `src/core/PlaylistLibrary.ts` | Several playlists stored as a linked list of playlists |
 

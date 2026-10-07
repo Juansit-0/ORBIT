@@ -203,6 +203,21 @@ describe('Playlist', () => {
       expect(titles(playlist)).toEqual(['a', 'b', 'c', 'd', 'e'])
     })
 
+    it('never plays the same artist twice in a row when it can avoid it', () => {
+      for (let round = 0; round < 40; round++) {
+        const mixed = new Playlist()
+        const artists = ['Queen', 'Queen', 'Queen', 'Adele', 'Adele', 'Muse', 'Muse', 'Sia']
+        artists.forEach((artist, index) => mixed.addLast({ ...song(String(index)), artist: `${artist} feat. Guest ${index}` }))
+        mixed.next()
+        mixed.setShuffle(true)
+        const order = mixed.playOrder().map((node) => node.value.artist.split(' feat.')[0])
+        for (let i = 1; i < order.length; i++) expect(order[i]).not.toBe(order[i - 1])
+        mixed.addLast({ ...song('late'), artist: 'Queen' })
+        const after = mixed.playOrder().map((node) => node.value.artist.split(' feat.')[0])
+        for (let i = 1; i < after.length; i++) expect(after[i]).not.toBe(after[i - 1])
+      }
+    })
+
     it('goes back through the shuffled order', () => {
       playlist.setShuffle(true)
       const order = playlist.playOrder().map((n) => n.value.id)
