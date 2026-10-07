@@ -2990,3 +2990,19 @@ html:not(.has-scene) .lens[data-cover='shown'] {
     width: 100%;
   }
 }
+
+.dj-chip[data-mixing='true'] .icon {
+  animation: dj-spin 1.4s linear infinite;
+}
+
+@keyframes dj-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dj-chip[data-mixing='true'] .icon {
+    animation: none;
+  }
+}

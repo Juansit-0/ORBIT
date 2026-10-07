@@ -1,0 +1,35 @@
+import { expect, test } from './fixtures.ts'
+
+test.describe('auto DJ', () => {
+  test('is off by default, fades the song out near its end and moves on', async ({ page, orbit }) => {
+    const chip = page.locator('.dj-chip')
+    await expect(chip).toHaveAttribute('aria-pressed', 'false')
+    await chip.click()
+    await expect(chip).toHaveAttribute('aria-pressed', 'true')
+    await orbit.play()
+    await expect.poll(() => page.evaluate(() => window.orbitFakePlayer?.playing ?? false)).toBe(true)
+    await page.locator('.range--seek').fill(String(369000 - 7000))
+    await expect(chip).toHaveAttribute('data-mixing', 'true')
+    await expect(chip).toContainText('Mixing')
+    await expect.poll(() => page.evaluate(() => window.orbitFakePlayer?.volume ?? 80)).toBeLessThan(60)
+    await expect.poll(() => orbit.currentTitle(), { timeout: 15000 }).toBe('Blinding Lights')
+    await expect(chip).toHaveAttribute('data-mixing', 'false')
+    await expect.poll(() => page.evaluate(() => window.orbitFakePlayer?.volume ?? 0), { timeout: 8000 }).toBe(80)
+  })
+
+  test('stops the mix when the listener pauses and is remembered', async ({ page, orbit }) => {
+    await page.locator('body').click({ position: { x: 5, y: 5 } })
+    await page.keyboard.press('d')
+    await expect(orbit.toast('Auto DJ on')).toBeVisible()
+    await orbit.play()
+    await expect.poll(() => page.evaluate(() => window.orbitFakePlayer?.playing ?? false)).toBe(true)
+    await page.locator('.range--seek').fill(String(369000 - 7000))
+    await expect(page.locator('.dj-chip')).toHaveAttribute('data-mixing', 'true')
+    await orbit.page.locator('.play').click()
+    await expect(page.locator('.dj-chip')).toHaveAttribute('data-mixing', 'false')
+    await expect.poll(() => page.evaluate(() => window.orbitFakePlayer?.volume ?? 0)).toBe(80)
+    expect(await orbit.currentTitle()).toBe('Get Lucky')
+    await page.reload()
+    await expect(page.locator('.dj-chip')).toHaveAttribute('aria-pressed', 'true')
+  })
+})

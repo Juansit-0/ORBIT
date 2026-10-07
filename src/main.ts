@@ -17,6 +17,7 @@ import { bindMediaSession } from './player/mediaSession.ts'
 import { PreviewPlayer } from './player/PreviewPlayer.ts'
 import { SleepTimer } from './player/SleepTimer.ts'
 import { VolumeFader } from './player/VolumeFader.ts'
+import { DjMix, mixProgress } from './player/DjMix.ts'
 import { YouTubePlayer } from './player/YouTubePlayer.ts'
 import { resolveVideoIds } from './services/resolveService.ts'
 import { mountScene } from './scene/mountScene.ts'
@@ -140,6 +141,26 @@ if (root) {
   radioChip.addEventListener('click', () => radio.stop())
   radio.onChange(() => (radioChip.hidden = !radio.active))
   now.tags.prepend(radioChip)
+  const dj = new DjMix(playback, playlist, prefs.dj)
+  const djChip = el('button', {
+    class: 'chip deck__chip dj-chip',
+    attrs: { type: 'button', 'aria-pressed': String(dj.enabled), title: 'Auto DJ (D): fade each song into the next' },
+  }, [icon('dj'), el('span', { class: 'dj-chip__label', text: 'Auto DJ' })])
+  djChip.addEventListener('click', () => dj.toggle())
+  const toggleDj = () => {
+    const enabled = dj.toggle()
+    showToast({ tone: 'info', title: enabled ? 'Auto DJ on' : 'Auto DJ off', detail: enabled ? 'Each song fades into the next in its last 8 seconds.' : undefined })
+  }
+  dj.onChange((enabled) => {
+    djChip.setAttribute('aria-pressed', String(enabled))
+    savePrefs({ dj: enabled })
+  })
+  playback.subscribe((state) => {
+    djChip.dataset.mixing = String(state.mixing)
+    const label = djChip.querySelector('.dj-chip__label')
+    if (label) label.textContent = state.mixing ? 'Mixing' : 'Auto DJ'
+  })
+  now.tags.append(djChip)
   let cinemaDelay = prefs.cinemaDelay
   let cinemaFullscreen = prefs.cinemaFullscreen
   const cinema = new CinemaMode(app, { delayMs: () => cinemaDelay, fullscreen: () => cinemaFullscreen })
@@ -224,6 +245,8 @@ if (root) {
     toggleList: () => toggleList(),
     listShown: () => listShown,
     recent: () => played.entries().map((entry) => entry.song),
+    toggleDj,
+    djOn: () => dj.enabled,
   })
   root.append(shell, more.panel, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
   mountOrbitCursor()
@@ -246,6 +269,7 @@ if (root) {
   mountScene(now.stage, playback, (scene) => {
     now.onCoverReveal((shown) => scene.setCoverShown(shown))
     scene.setAudio(() => reactor.features())
+    scene.setMix(() => mixProgress(playback.state))
   })
   bindShortcuts(
     app,
@@ -258,6 +282,7 @@ if (root) {
       toggleCinema: () => cinema.toggle(),
       togglePalette: () => palette.toggle(),
       toggleList: () => toggleList(),
+      toggleDj,
       focusFilter: () => {
         tabs.show('queue')
         queue.focusFilter()

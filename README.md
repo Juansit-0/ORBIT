@@ -33,6 +33,7 @@ The linked list dock in the interface draws the live structure: `null`, `HEAD`, 
 - Radio of similar songs when the flight plan ends, share links, export and import
 - Interactive particle planet that reacts to the music: cursor trail, click shockwave, cover that dissolves into the planet and colours taken from the cover
 - Smooth volume transitions
+- Auto DJ (`D`): each song fades into the next in its last 8 seconds while the planet spins up for the handover
 - Top charts of your country when the search is empty, ready to play or add
 - Installable as an app, and the interface opens offline after the first visit
 - Recently played: songs heard for 10 seconds or more appear when the search is empty and in the command palette
@@ -66,6 +67,7 @@ npm run lint
 | `→` / `←` | Next or previous song |
 | `Shift` + `→` / `←` | Forward or back 10 seconds |
 | `S` / `R` | Shuffle / cycle repeat |
+| `D` | Auto DJ |
 | `M` | Mute |
 | `L` | Lyrics |
 | `/` | Search |

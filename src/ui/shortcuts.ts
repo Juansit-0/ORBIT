@@ -9,6 +9,7 @@ export interface ShortcutTargets {
   toggleCinema: () => void
   togglePalette: () => void
   toggleList: () => void
+  toggleDj: () => void
 }
 
 export const SHORTCUTS: { keys: string[]; action: string }[] = [
@@ -20,6 +21,7 @@ export const SHORTCUTS: { keys: string[]; action: string }[] = [
   { keys: ['Shift', '←'], action: 'Back 10 seconds' },
   { keys: ['S'], action: 'Toggle shuffle' },
   { keys: ['R'], action: 'Cycle repeat' },
+  { keys: ['D'], action: 'Auto DJ on or off' },
   { keys: ['M'], action: 'Mute or unmute' },
   { keys: ['L'], action: 'Show lyrics' },
   { keys: ['O'], action: 'Player mode' },
@@ -96,6 +98,8 @@ export function bindShortcuts(app: PlayerApp, targets: ShortcutTargets, help: HT
       app.toggleShuffle()
     } else if (key === 'r' || key === 'R') {
       app.cycleRepeat()
+    } else if (key === 'd' || key === 'D') {
+      targets.toggleDj()
     } else if (key === 'm' || key === 'M') {
       const volume = app.playback.state.volume
       if (volume > 0) {

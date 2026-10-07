@@ -24,6 +24,8 @@ export interface PaletteActions {
   toggleList: () => void
   listShown: () => boolean
   recent: () => Song[]
+  toggleDj: () => void
+  djOn: () => boolean
 }
 
 export class CommandPalette {
@@ -112,6 +114,7 @@ export class CommandPalette {
       { id: 'repeat', label: 'Change repeat mode', keywords: `loop repeat ${playlist.repeat}`, glyph: 'repeat', group: 'Actions', hint: 'R', run: () => app.cycleRepeat() },
       { id: 'undo', label: 'Undo', keywords: app.history.undoLabel ?? '', glyph: 'undo', group: 'Actions', hint: 'Ctrl Z', run: () => void app.undo() },
       { id: 'redo', label: 'Redo', keywords: app.history.redoLabel ?? '', glyph: 'redo', group: 'Actions', run: () => void app.redo() },
+      { id: 'dj', label: this.actions.djOn() ? 'Auto DJ off' : 'Auto DJ on', keywords: 'mix crossfade transition dj', glyph: 'dj', group: 'Actions', hint: 'D', run: () => this.actions.toggleDj() },
       { id: 'cinema', label: 'Player mode', keywords: 'cinema focus fullscreen planet', glyph: 'cinema', group: 'Actions', hint: 'O', run: () => this.actions.toggleCinema() },
       { id: 'list', label: this.actions.listShown() ? 'Hide linked list' : 'Show linked list', keywords: 'visualizer nodes pointers head tail explain', glyph: 'orbit', group: 'Actions', hint: 'V', run: () => this.actions.toggleList() },
       { id: 'lyrics', label: 'Show lyrics', keywords: 'karaoke words', glyph: 'lyrics', group: 'Actions', hint: 'L', run: () => this.actions.toggleLyrics() },

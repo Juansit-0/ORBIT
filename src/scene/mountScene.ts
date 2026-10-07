@@ -23,7 +23,7 @@ function firstVisit(): boolean {
 export function mountScene(
   anchor: HTMLElement,
   playback: PlaybackController,
-  onReady: (scene: { setCoverShown(shown: boolean): void; setAudio(provider: () => AudioFeatures | null): void }) => void,
+  onReady: (scene: { setCoverShown(shown: boolean): void; setAudio(provider: () => AudioFeatures | null): void; setMix(provider: () => number): void }) => void,
 ): void {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
   if (reduced.matches || !webglAvailable() || import.meta.env.VITE_PLAYER === 'fake') return

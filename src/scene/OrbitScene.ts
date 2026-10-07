@@ -134,6 +134,8 @@ export class OrbitScene {
   private readonly targetKey: Color
   private coverRequest = 0
   private audio: (() => AudioFeatures | null) | null = null
+  private mix: (() => number) | null = null
+  private mixLevel = 0
   private lastBeat = 0
   private inputStamp = performance.now()
   private readonly onPointer: (event: PointerEvent) => void
@@ -287,6 +289,10 @@ export class OrbitScene {
 
   setAudio(provider: () => AudioFeatures | null): void {
     this.audio = provider
+  }
+
+  setMix(provider: () => number): void {
+    this.mix = provider
   }
 
   setCoverShown(shown: boolean): void {
@@ -496,7 +502,8 @@ export class OrbitScene {
     this.updateTrail()
     this.parallax.x += (Math.max(-1, Math.min(1, this.pointer.x)) * 0.12 - this.parallax.x) * Math.min(1, delta * 2)
     this.parallax.y += (Math.max(-1, Math.min(1, this.pointer.y)) * 0.08 - this.parallax.y) * Math.min(1, delta * 2)
-    this.points.rotation.y += delta * (0.035 + this.energy * 0.04)
+    this.mixLevel += ((this.mix?.() ?? 0) - this.mixLevel) * Math.min(1, delta * 3)
+    this.points.rotation.y += delta * (0.035 + this.energy * 0.04 + Math.sin(this.mixLevel * Math.PI) * 0.9)
     this.points.rotation.x = Math.sin(elapsed * 0.11) * 0.12 + this.parallax.y
     this.points.rotation.z = this.parallax.x * 0.5
     this.camera.position.x = Math.sin(elapsed * 0.07) * 0.05
@@ -519,7 +526,7 @@ export class OrbitScene {
       uniforms.uBeat!.value = 0
       this.lastBeat = 0
     }
-    uniforms.uEnergy!.value = this.energy
+    uniforms.uEnergy!.value = this.energy + Math.sin(this.mixLevel * Math.PI) * 0.8
     uniforms.uShock!.value = this.shock
     uniforms.uIntro!.value = this.intro
     this.points.updateMatrixWorld()

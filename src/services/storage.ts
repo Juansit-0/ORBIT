@@ -60,6 +60,7 @@ export interface Prefs {
   radio: boolean
   smoothVolume: boolean
   showList: boolean
+  dj: boolean
 }
 
 export function loadPrefs(): Prefs {
@@ -67,7 +68,7 @@ export function loadPrefs(): Prefs {
   const volume = typeof value?.volume === 'number' && value.volume >= 0 && value.volume <= 100 ? value.volume : 80
   const delay = value?.cinemaDelay
   const cinemaDelay = delay === null ? null : CINEMA_DELAYS.includes(delay as (typeof CINEMA_DELAYS)[number]) ? (delay as number) : 20000
-  return { volume, vinyl: value?.vinyl === true, cinemaDelay, cinemaFullscreen: value?.cinemaFullscreen === true, explain: value?.explain === true, radio: value?.radio !== false, smoothVolume: value?.smoothVolume !== false, showList: value?.showList === true }
+  return { volume, vinyl: value?.vinyl === true, cinemaDelay, cinemaFullscreen: value?.cinemaFullscreen === true, explain: value?.explain === true, radio: value?.radio !== false, smoothVolume: value?.smoothVolume !== false, showList: value?.showList === true, dj: value?.dj === true }
 }
 
 export function savePrefs(patch: Partial<Prefs>): void {

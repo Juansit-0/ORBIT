@@ -4,7 +4,9 @@ import type { SongNode } from '../core/SongNode.ts'
 import type { Song } from '../core/types.ts'
 import { ServiceError } from '../services/http.ts'
 import type { PlayerAdapter, PlayerEvent, PlayerState } from './PlayerAdapter.ts'
-import type { VolumeFader } from './VolumeFader.ts'
+import { VolumeFader } from './VolumeFader.ts'
+
+export const MIX_IN_MS = 2500
 
 export type SourceKind = 'full' | 'preview'
 
@@ -17,6 +19,7 @@ export interface PlaybackState {
   volume: number
   song: Song | null
   inPlan: boolean
+  mixing: boolean
 }
 
 export type PlaybackNotice =
@@ -28,6 +31,7 @@ export interface PlaybackDeps {
   full: PlayerAdapter
   preview: PlayerAdapter
   resolve: (song: Song, signal: AbortSignal) => Promise<string[]>
+  mixFader?: VolumeFader
 }
 
 type StateListener = (state: PlaybackState) => void
@@ -57,13 +61,18 @@ export class PlaybackController {
     volume: 80,
     song: null,
     inPlan: false,
+    mixing: false,
   }
   private transient: SongNode | null = null
   private fader: VolumeFader | null = null
+  private readonly mixFader: VolumeFader
+  private mixing = false
+  private mixIn = false
 
   constructor(playlist: Playlist, deps: PlaybackDeps) {
     this.playlist = playlist
     this.deps = deps
+    this.mixFader = deps.mixFader ?? new VolumeFader()
     const adapters = new Set([deps.full, deps.preview])
     for (const adapter of adapters) adapter.subscribe((event) => this.handle(adapter, event))
     this.snapshot.nodeId = playlist.current?.id ?? null
@@ -143,6 +152,7 @@ export class PlaybackController {
 
   async togglePlay(): Promise<void> {
     if (this.isPlaying) {
+      this.cancelMix()
       await this.fadeOutCurrent()
       this.active?.pause()
       this.active?.setVolume(this.snapshot.volume)
@@ -212,12 +222,45 @@ export class PlaybackController {
     return () => this.looseEndListeners.delete(listener)
   }
 
+  get stopsAfterCurrent(): boolean {
+    return this.stopAfter
+  }
+
+  async mixToNext(ms: number): Promise<boolean> {
+    const adapter = this.active
+    if (!adapter || this.mixing || this.snapshot.status !== 'playing' || this.transientNode) return false
+    const token = this.loadToken
+    this.mixing = true
+    this.update({ mixing: true })
+    await this.mixFader.ramp(adapter, this.snapshot.volume, 0, ms)
+    if (!this.mixing || token !== this.loadToken) return false
+    this.mixing = false
+    this.mixIn = true
+    this.update({ mixing: false })
+    await this.handleEnded()
+    if (this.mixIn) {
+      this.mixIn = false
+      adapter.setVolume(this.snapshot.volume)
+    }
+    return true
+  }
+
+  private cancelMix(): void {
+    if (!this.mixing) return
+    this.mixing = false
+    this.mixFader.cancel()
+    this.active?.setVolume(this.snapshot.volume)
+    this.update({ mixing: false })
+  }
+
   pause(): void {
+    this.cancelMix()
     if (this.isPlaying) this.active?.pause()
   }
 
   seek(ms: number): void {
     if (!this.active || this.loadedNodeId === null) return
+    this.cancelMix()
     const target = Math.min(Math.max(0, ms), this.snapshot.durationMs || ms)
     this.active.seek(target)
     this.update({ currentMs: target })
@@ -228,6 +271,8 @@ export class PlaybackController {
   }
 
   setVolume(volume: number): void {
+    this.cancelMix()
+    this.mixFader.cancel()
     this.fader?.cancel()
     const clamped = Math.round(Math.min(100, Math.max(0, volume)))
     this.deps.full.setVolume(clamped)
@@ -286,7 +331,9 @@ export class PlaybackController {
   }
 
   private async load(node: SongNode, autoplay: boolean): Promise<void> {
-    if (this.fader && this.loadedNodeId !== node.id) await this.fadeOutCurrent(220)
+    this.cancelMix()
+    this.mixFader.cancel()
+    if (this.fader && !this.mixIn && this.loadedNodeId !== node.id) await this.fadeOutCurrent(220)
     this.cancelPending()
     const token = this.loadToken
     const abort = new AbortController()
@@ -351,12 +398,15 @@ export class PlaybackController {
     this.active = adapter
     this.loadedNodeId = node.id
     this.update({ source: kind, durationMs: source.durationMs })
+    const mixIn = this.mixIn && autoplay
+    this.mixIn = false
     try {
-      if (this.fader && autoplay) adapter.setVolume(0)
+      if ((this.fader || mixIn) && autoplay) adapter.setVolume(0)
       await adapter.load(source, autoplay)
       if (token === this.loadToken) this.failures = 0
-      if (this.fader && autoplay && token === this.loadToken) void this.fader.fadeIn(adapter, this.snapshot.volume)
-      else if (this.fader) adapter.setVolume(this.snapshot.volume)
+      if (mixIn && token === this.loadToken) void this.mixFader.ramp(adapter, 0, this.snapshot.volume, MIX_IN_MS)
+      else if (this.fader && autoplay && token === this.loadToken) void this.fader.fadeIn(adapter, this.snapshot.volume)
+      else if (this.fader || mixIn) adapter.setVolume(this.snapshot.volume)
     } catch {
       if (token === this.loadToken) this.markUnavailable(node)
     }
