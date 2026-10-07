@@ -174,12 +174,13 @@ if (root) {
   }
   dj.onChange((enabled) => {
     djChip.setAttribute('aria-pressed', String(enabled))
+    settings.setDjOn(enabled)
     savePrefs({ dj: enabled })
   })
   playback.subscribe((state) => {
+    if (djChip.dataset.mixing === String(state.mixing)) return
     djChip.dataset.mixing = String(state.mixing)
-    const label = djChip.querySelector('.dj-chip__label')
-    if (label) label.textContent = state.mixing ? 'Mixing' : 'Auto DJ'
+    djChip.title = state.mixing ? 'Auto DJ: mixing into the next song' : 'Auto DJ (D): fade each song into the next'
   })
   now.tags.append(djChip)
   const speaker = browserSpeaker()
@@ -230,6 +231,7 @@ if (root) {
       savePrefs({ explain: enabled })
     },
   })
+  settings.setDjOn(dj.enabled)
   const cinemaButton = el('button', {
     class: 'icon-button',
     attrs: { type: 'button', 'aria-label': 'Player mode', title: 'Player mode (O)' },

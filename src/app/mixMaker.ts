@@ -1,7 +1,7 @@
 import { artistKey, primaryArtist } from '../core/artist.ts'
 import { spreadShuffle } from '../core/spreadShuffle.ts'
 import type { Song } from '../core/types.ts'
-import { pickRadioSongs } from './radioPick.ts'
+import { pickRadioSongs, radioKey } from './radioPick.ts'
 
 export const MIX_SIZE = 20
 
@@ -17,11 +17,14 @@ export async function buildMix(seed: string, search: SongSearch, random: () => n
   const first = await search(term)
   const top = first[0]
   if (!top) return []
-  const terms = new Set<string>()
   const artist = primaryArtist(top.artist)
-  if (artist.toLowerCase() !== term.toLowerCase()) terms.add(artist)
-  if (top.genre) terms.add(`${top.genre} hits`)
-  const more = await Promise.all([...terms].map((extra) => search(extra).catch(() => [] as Song[])))
-  const picked = pickRadioSongs([first, ...more], { ids: new Set(), keys: new Set() }, size)
+  const sameArtist = artist.toLowerCase() === term.toLowerCase()
+  const close = sameArtist ? [] : await search(artist).catch(() => [] as Song[])
+  const picked = pickRadioSongs([first, close], { ids: new Set(), keys: new Set() }, size)
+  if (picked.length < size && top.genre) {
+    const genre = await search(`${top.genre} hits`).catch(() => [] as Song[])
+    const fill = pickRadioSongs([genre], { ids: new Set(picked.map((song) => song.id)), keys: new Set(picked.map(radioKey)) }, size - picked.length)
+    picked.push(...fill)
+  }
   return spreadShuffle(picked, { artistOf: (song) => artistKey(song.artist), genreOf: (song) => song.genre, random })
 }

@@ -351,6 +351,12 @@ While a full track plays from YouTube, the monitor is a flush footer of the flig
 ### Deck Chips
 The source ("Full track", "30 s preview") is plain Ink Two caption text, not a chip. Toggle chips (Lyrics, Live sound) are paper pills with a hairline ring; pressed, they take Burn Wash with Burn Ink, like shuffle and repeat. The artist is one line with an ellipsis, with the album on a smaller Ink Three line under it.
 
+### Auto DJ Chip
+A toggle chip in the deck chip row, labelled "Auto DJ" with a record and tonearm icon. Pressed, it takes Burn Wash with Burn Ink. While a mix runs only the record turns: the label and width stay fixed so the row never shifts. Under reduced motion the record does not turn.
+
+### Mix Dialog
+A modal Chart Paper dialog, 560px wide, with 16px corners, the hairline ring and Lifted shadow over a light navy scrim. Every block sits on one 24px inset: the Unbounded title, the lead, the 44px seed field with a 44px "Make mix" button, the list and the footer. "Make mix" is the Burn primary until results arrive, then turns quiet so "Create playlist" is the only Burn fill. The preview rows carry mono positions (01, 02…), a 40px cover, the title and "artist · length", and a leave-out button. The footer always has Cancel; the mono summary ("Mix · seed · 20 songs · 1:40:24") and Create playlist appear with results. On phones the two buttons share the full width.
+
 ### List Node Chain (signature)
 The dock plots the list from a null terminal to a null terminal. Each node is a Chart Paper card with 12px corners and a Mist Strong border whose width grows with song duration (minimum 30px); container queries drop the title below 120px, stack index and time below 64px and hide the time below 42px. Between nodes, a paired arrow draws next in Navy Ink and prev in Chart Blue, matching the legend. HEAD and TAIL tags sit above the end nodes in Burn Ink mono. The current node takes the Burn border, Burn Wash fill and Low shadow, and a mono line below names it.
 

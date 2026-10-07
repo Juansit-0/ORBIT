@@ -26,6 +26,14 @@ describe('buildMix', () => {
     }
   })
 
+  it('only reaches for the genre when the seed and its artist run short', async () => {
+    const many = Array.from({ length: 25 }, (_, i) => track(String(i), `Artist ${i % 5}`))
+    const search = vi.fn(async (term: string) => (term === 'Pop hits' ? [track('g', 'Other')] : many))
+    const mix = await buildMix('seed', search)
+    expect(search).not.toHaveBeenCalledWith('Pop hits')
+    expect(mix.map((s) => s.id)).not.toContain('g')
+  })
+
   it('keeps at most the mix size', async () => {
     const many = Array.from({ length: 40 }, (_, i) => track(String(i), `Artist ${i}`))
     const mix = await buildMix('anything', async () => many, Math.random, 20)

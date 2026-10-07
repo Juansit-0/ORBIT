@@ -48,11 +48,12 @@ export class LibraryMenu {
       button.addEventListener('click', run)
       return button
     }
+    const mixButton = el('button', { class: 'button button--quiet button--small library__mix', attrs: { type: 'button' } }, [icon('dj'), el('span', { text: 'New mix' })])
+    mixButton.addEventListener('click', () => {
+      this.panel.hidePopover()
+      this.onMix?.()
+    })
     const tools = el('div', { class: 'library__tools' }, [
-      tool('dj', 'New mix', () => {
-        this.panel.hidePopover()
-        this.onMix?.()
-      }),
       tool('share', 'Share link', () => void this.share()),
       tool('download', 'Export', () => this.exportFile()),
       tool('upload', 'Import', () => fileInput.click()),
@@ -68,6 +69,7 @@ export class LibraryMenu {
       el('p', { class: 'library__title', text: 'Playlists', attrs: { id: 'library-title' } }),
       this.list,
       createForm,
+      mixButton,
       tools,
     ])
     createForm.addEventListener('submit', (event) => {

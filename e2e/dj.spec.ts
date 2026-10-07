@@ -10,7 +10,7 @@ test.describe('auto DJ', () => {
     await expect.poll(() => page.evaluate(() => window.orbitFakePlayer?.playing ?? false)).toBe(true)
     await page.locator('.range--seek').fill(String(369000 - 7000))
     await expect(chip).toHaveAttribute('data-mixing', 'true')
-    await expect(chip).toContainText('Mixing')
+    await expect(chip).toHaveText('Auto DJ')
     await expect.poll(() => page.evaluate(() => window.orbitFakePlayer?.volume ?? 80)).toBeLessThan(60)
     await expect.poll(() => orbit.currentTitle(), { timeout: 15000 }).toBe('Blinding Lights')
     await expect(chip).toHaveAttribute('data-mixing', 'false')
