@@ -38,6 +38,7 @@ The linked list dock in the interface draws the live structure: `null`, `HEAD`, 
 - Top charts of your country when the search is empty, ready to play or add
 - Installable as an app, and the interface opens offline after the first visit
 - Make a mix: type an artist, a genre or a song and Orbit builds a new playlist of up to 20 songs around it
+- Surprise me: plays a random chart song you have not heard yet, without adding it
 - Recently played: songs heard for 10 seconds or more appear when the search is empty and in the command palette
 
 ## Run it

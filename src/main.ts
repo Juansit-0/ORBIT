@@ -24,6 +24,8 @@ import { mountScene } from './scene/mountScene.ts'
 import { lookupSongs } from './services/lookupService.ts'
 import { decodePlan } from './services/planCodec.ts'
 import { PlayHistory } from './services/history.ts'
+import { surpriseSong } from './app/surprise.ts'
+import { searchSongs } from './services/searchService.ts'
 import { registerServiceWorker } from './services/serviceWorker.ts'
 import { loadLibrary, loadPlaylist, loadPrefs, savePrefs } from './services/storage.ts'
 import { showToast } from './ui/components/toast.ts'
@@ -98,6 +100,21 @@ if (root) {
   lyrics.onActiveLine((text) => now.setKaraoke(text))
   const liveChip = createLiveSoundChip(reactor)
   if (liveChip) now.tags.append(liveChip)
+  const surprise = async () => {
+    const avoid = new Set([...playlist.list.toArray().map((entry) => entry.id), ...played.entries().map((entry) => entry.song.id)])
+    try {
+      const song = await surpriseSong({ charts: () => search.chartList(), search: (term) => searchSongs(term), avoid })
+      if (!song) {
+        showToast({ tone: 'info', title: 'Nothing new to surprise you with', detail: 'Try again in a moment.' })
+        return
+      }
+      await app.playNow(song)
+      showToast({ tone: 'info', title: `Surprise: “${song.title}”`, detail: `${song.artist}. It is not in your flight plan.`, action: { label: 'Add to plan', run: () => void app.addLast(song) } })
+    } catch {
+      showToast({ tone: 'error', title: 'The catalog could not be reached', detail: 'Check your connection and try again.' })
+    }
+  }
+  search.onSurprise = () => void surprise()
   const libraryMenu = new LibraryMenu(app)
   const mix = new MixDialog(app)
   libraryMenu.onMix = () => mix.open()
@@ -251,6 +268,7 @@ if (root) {
     toggleDj,
     djOn: () => dj.enabled,
     makeMix: () => mix.open(),
+    surprise: () => void surprise(),
   })
   root.append(shell, mix.dialog, more.panel, help.panel, sleepMenu.panel, libraryMenu.panel, settings.panel, palette.dialog, queue.sheet.dialog)
   mountOrbitCursor()

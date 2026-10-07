@@ -32,6 +32,7 @@ export class SearchPanel {
   private abort: AbortController | null = null
   private lastTerm = ''
   private idle = true
+  onSurprise: (() => void) | null = null
   private charts: Song[] | 'loading' | 'error' | null = null
   private chartsExpanded = false
   private readonly country = countryFromLocale(navigator.language)
@@ -115,6 +116,10 @@ export class SearchPanel {
     this.open()
   }
 
+  chartList(): Song[] | null {
+    return Array.isArray(this.charts) ? this.charts : null
+  }
+
   get isOpen(): boolean {
     return this.root.dataset.open === 'true'
   }
@@ -187,7 +192,12 @@ export class SearchPanel {
 
   private renderCharts(): HTMLElement {
     const heading = el('h2', { class: 'finder__section-title', text: `Top charts · ${regionName(this.country)}`, attrs: { id: 'charts-heading' } })
-    const head = el('header', { class: 'finder__section-head' }, [heading])
+    const surprise = el('button', { class: 'button button--quiet button--small finder__surprise', attrs: { type: 'button' } }, [icon('shuffle'), el('span', { text: 'Surprise me' })])
+    surprise.addEventListener('click', () => {
+      this.close()
+      this.onSurprise?.()
+    })
+    const head = el('header', { class: 'finder__section-head' }, [heading, surprise])
     const section = el('section', { class: 'finder__section finder__charts', attrs: { 'aria-labelledby': 'charts-heading' } }, [head])
     const charts = this.charts
     if (charts === null || charts === 'loading') {
