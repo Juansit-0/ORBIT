@@ -17,6 +17,7 @@ export class LibraryMenu {
   private readonly createInput: HTMLInputElement
   private readonly createError: HTMLElement
   private readonly linkField: HTMLInputElement
+  onMix: (() => void) | null = null
   private renaming: string | null = null
   private confirming: string | null = null
   private confirmTimer: number | undefined
@@ -48,6 +49,10 @@ export class LibraryMenu {
       return button
     }
     const tools = el('div', { class: 'library__tools' }, [
+      tool('dj', 'New mix', () => {
+        this.panel.hidePopover()
+        this.onMix?.()
+      }),
       tool('share', 'Share link', () => void this.share()),
       tool('download', 'Export', () => this.exportFile()),
       tool('upload', 'Import', () => fileInput.click()),
