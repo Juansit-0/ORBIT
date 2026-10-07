@@ -43,6 +43,8 @@ export function etaFor(input: EtaInput): EtaResult {
   return { starts, landsAt: input.repeat === 'all' ? null : clock }
 }
 
-export function formatClock(time: number, locale?: string): string {
-  return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(time)
+const CLOCK = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+
+export function formatClock(time: number): string {
+  return CLOCK.format(time)
 }

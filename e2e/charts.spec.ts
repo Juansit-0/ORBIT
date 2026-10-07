@@ -6,7 +6,7 @@ test.describe('top charts', () => {
     const charts = page.locator('.results--charts .result')
     await expect(charts).toHaveCount(10)
     await expect(charts.first().locator('.result__rank')).toHaveText('1')
-    await expect(page.locator('#charts-heading')).toHaveText('Top charts · US')
+    await expect(page.locator('#charts-heading')).toHaveText('Top charts · United States')
     await page.getByRole('button', { name: 'Show all 12' }).click()
     await expect(charts).toHaveCount(12)
     await orbit.result('Chart Song 3').getByRole('button', { name: /at the end/ }).click()

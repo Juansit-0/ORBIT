@@ -185,7 +185,7 @@ export class LyricsPanel {
   private center(behavior: ScrollBehavior): void {
     const line = this.lines[this.active]
     if (!line || !this.root.offsetParent) return
-    const top = line.offsetTop - this.body.clientHeight / 2 + line.offsetHeight / 2
+    const top = line.offsetTop - this.body.clientHeight * 0.35 + line.offsetHeight / 2
     this.body.scrollTo({ top, behavior })
   }
 }

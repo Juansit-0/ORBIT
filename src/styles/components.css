@@ -633,7 +633,7 @@
 
 .queue__landing {
   margin: 0;
-  color: var(--burn-ink);
+  color: var(--ink-2);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 500;
@@ -867,11 +867,24 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 }
 
 .deck__artist {
+  display: grid;
+  justify-items: center;
   margin: 0;
-  max-width: 44ch;
+  max-width: min(44ch, 100%);
   color: var(--ink-2);
   font-size: var(--text-body-lg);
-  text-wrap: balance;
+}
+
+.deck__artist-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck__album {
+  color: var(--ink-3);
+  font-size: var(--text-sm);
 }
 
 .badge {
@@ -1163,7 +1176,11 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   }
 
   .rail__head {
-    padding: var(--space-4) var(--space-4) var(--space-2);
+    padding: var(--space-4) var(--space-4) var(--space-1);
+  }
+
+  .rail__summary {
+    margin-inline: var(--space-4);
   }
 
   .search,
@@ -1356,6 +1373,10 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 
 .deck__tags .badge {
   margin: 0;
+  padding: 0 var(--space-1);
+  background: none;
+  color: var(--ink-2);
+  font-weight: 400;
 }
 
 .deck__chip {
@@ -1365,8 +1386,8 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 }
 
 .deck__chip[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--burn-wash);
+  color: var(--burn-ink);
   box-shadow: none;
 }
 
@@ -1407,7 +1428,7 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
-  mask-image: linear-gradient(transparent, #000 28%, #000 72%, transparent);
+  mask-image: linear-gradient(#000 70%, transparent);
 }
 
 .lyrics__body::-webkit-scrollbar {
@@ -1424,7 +1445,7 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 .lyrics__lines {
   display: grid;
   gap: 2px;
-  padding-block: calc(var(--lyrics-height) / 2 - 1em);
+  padding-block: var(--space-2) calc(var(--lyrics-height) / 2);
 }
 
 .lyric {
@@ -1435,9 +1456,9 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink-3);
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-weight: 500;
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
   line-height: 1.35;
   text-align: center;
   text-wrap: balance;
@@ -1460,6 +1481,7 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 
 .lyric--active {
   color: var(--ink);
+  font-weight: 600;
   transform: scale(1.04);
 }
 
@@ -1601,10 +1623,6 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   .more__item[aria-label='Keyboard shortcuts'] {
     display: none;
   }
-}
-
-.library-bar {
-  margin: calc(var(--space-1) * -1) var(--space-5) var(--space-3);
 }
 
 .library__button {
@@ -1798,9 +1816,6 @@ html:not(.has-scene) .lens[data-cover='shown'] {
     width: auto;
   }
 
-  .library-bar {
-    margin-inline: var(--space-4);
-  }
 }
 
 .seek__bar {
@@ -2047,11 +2062,11 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   align-self: end;
   z-index: 2;
   display: none;
-  margin: 0 var(--space-3) var(--space-3);
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
+  margin: 0 var(--space-4) var(--space-4);
+  padding: var(--space-2) 0 0;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
   background: var(--paper);
-  box-shadow: 0 0 0 1px var(--rule), var(--shadow-2);
+  box-shadow: 0 -1px 0 var(--rule);
 }
 
 .monitor[data-active='true'] {
@@ -2108,7 +2123,8 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 }
 
 .app:has(.monitor[data-active='true']) .rail--queue .rail__body {
-  padding-bottom: 268px;
+  margin-bottom: 246px;
+  mask-image: linear-gradient(#000 calc(100% - 24px), transparent);
 }
 
 @media (max-width: 920px) {
@@ -2138,7 +2154,8 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   }
 
   .app:has(.monitor[data-active='true']) .rail--queue .rail__body {
-    padding-bottom: var(--space-4);
+    margin-bottom: 0;
+    mask-image: none;
   }
 }
 
@@ -2786,12 +2803,11 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 
 .finder__section-title {
   margin: 0;
-  color: var(--ink-2);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .finder__body {
@@ -2844,10 +2860,6 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   text-align: right;
 }
 
-.result:nth-child(-n + 3) .result__rank {
-  color: var(--burn-ink);
-}
-
 @container (min-width: 440px) {
   .result {
     position: relative;
@@ -2858,18 +2870,14 @@ html:not(.has-scene) .lens[data-cover='shown'] {
     align-items: center;
   }
 
-  .results--charts .result {
-    grid-template-columns: 24px 48px minmax(0, 1fr);
-    grid-template-areas:
-      'rank cover meta'
-      'insert insert insert';
-  }
 
   .result .result__actions {
     position: absolute;
-    top: var(--space-3);
+    grid-area: auto;
+    top: 50%;
     right: var(--space-2);
-    height: 48px;
+    height: 40px;
+    transform: translateY(-50%);
     align-items: center;
     flex-wrap: nowrap;
     padding-left: var(--space-6);
@@ -2883,6 +2891,33 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   .result--inserting .result__actions {
     opacity: 1;
   }
+
+  .result:is(:hover, :focus-within) .result__meta {
+    padding-right: 300px;
+  }
+
+  .result {
+    grid-template-columns: 24px 40px minmax(0, 1fr);
+    grid-template-areas:
+      'rank cover meta'
+      'insert insert insert';
+    row-gap: 0;
+    padding: 6px var(--space-2);
+  }
+
+  .result--inserting {
+    row-gap: var(--space-2);
+  }
+
+  .result--inserting .result__actions {
+    top: 6px;
+    transform: none;
+  }
+
+  .result .result__cover {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 @media (hover: none) {
@@ -2895,17 +2930,63 @@ html:not(.has-scene) .lens[data-cover='shown'] {
     opacity: 1;
   }
 
-  .result {
-    grid-template-areas:
-      'cover meta'
-      'actions actions'
-      'insert insert';
-  }
-
   .results--charts .result {
     grid-template-areas:
       'rank cover meta'
       'actions actions actions'
       'insert insert insert';
+  }
+
+  @container (min-width: 440px) {
+    .result,
+    .results--charts .result {
+      grid-template-areas:
+        'rank cover meta'
+        'actions actions actions'
+        'insert insert insert';
+      row-gap: var(--space-2);
+    }
+
+    .result:is(:hover, :focus-within) .result__meta {
+      padding-right: 0;
+    }
+  }
+}
+
+.deck {
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+@media (min-width: 921px) {
+  .app:has(.finder[data-open='true']) .deck {
+    opacity: 0.4;
+  }
+}
+
+@media (hover: none) {
+  .result__actions .chip--play {
+    background: var(--mist);
+  }
+}
+
+@media (max-height: 820px) {
+  .lyrics {
+    --lyrics-height: clamp(6.5rem, 16svh, 9rem);
+  }
+
+  .deck {
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .waypoint__clock {
+    display: none;
+  }
+}
+
+@media (max-width: 920px) {
+  .monitor__video iframe {
+    width: 100%;
   }
 }

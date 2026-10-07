@@ -148,6 +148,16 @@ export class NowPlaying {
     app.playlist.subscribe(() => this.render(app.playback.state))
   }
 
+  private setArtist(artist: string, album: string): void {
+    if (this.artist.dataset.artist === artist && this.artist.dataset.album === album) return
+    this.artist.dataset.artist = artist
+    this.artist.dataset.album = album
+    this.artist.replaceChildren(
+      el('span', { class: 'deck__artist-name', text: artist, attrs: { title: artist } }),
+      album ? el('span', { class: 'deck__album', text: album }) : '',
+    )
+  }
+
   mountLyrics(pane: HTMLElement): void {
     this.root.querySelector('.deck__controls')?.before(pane)
   }
@@ -331,14 +341,14 @@ export class NowPlaying {
       }
       this.cover.alt = `Cover of ${song.album || song.title}`
       cascadeText(this.title, song.title)
-      setText(this.artist, song.album ? `${song.artist} · ${song.album}` : song.artist)
+      this.setArtist(song.artist, song.album)
     } else {
       this.cover.removeAttribute('src')
       this.title.removeAttribute('aria-label')
       this.title.dataset.cascaded = 'false'
       setText(this.emptyText, playlist.isEmpty() ? 'Nothing in orbit yet' : 'Ready for launch')
       setText(this.title, 'Orbit')
-      setText(this.artist, playlist.isEmpty() ? 'Add a song to launch the flight plan.' : 'Press play to start at the head of the list.')
+      this.setArtist(playlist.isEmpty() ? 'Add a song to launch the flight plan.' : 'Press play to start at the head of the list.', '')
     }
     const sourceText =
       state.status === 'loading' && song
