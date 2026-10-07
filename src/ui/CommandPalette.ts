@@ -27,6 +27,7 @@ export interface PaletteActions {
   toggleDj: () => void
   makeMix: () => void
   djOn: () => boolean
+  surprise: () => void
 }
 
 export class CommandPalette {
@@ -117,6 +118,7 @@ export class CommandPalette {
       { id: 'redo', label: 'Redo', keywords: app.history.redoLabel ?? '', glyph: 'redo', group: 'Actions', run: () => void app.redo() },
       { id: 'dj', label: this.actions.djOn() ? 'Auto DJ off' : 'Auto DJ on', keywords: 'mix crossfade transition dj', glyph: 'dj', group: 'Actions', hint: 'D', run: () => this.actions.toggleDj() },
       { id: 'mix', label: 'Make a mix', keywords: 'dj playlist generate new similar artist genre', glyph: 'dj', group: 'Actions', run: () => this.actions.makeMix() },
+      { id: 'surprise', label: 'Surprise me', keywords: 'random song discover play something', glyph: 'shuffle', group: 'Actions', run: () => this.actions.surprise() },
       { id: 'cinema', label: 'Player mode', keywords: 'cinema focus fullscreen planet', glyph: 'cinema', group: 'Actions', hint: 'O', run: () => this.actions.toggleCinema() },
       { id: 'list', label: this.actions.listShown() ? 'Hide linked list' : 'Show linked list', keywords: 'visualizer nodes pointers head tail explain', glyph: 'orbit', group: 'Actions', hint: 'V', run: () => this.actions.toggleList() },
       { id: 'lyrics', label: 'Show lyrics', keywords: 'karaoke words', glyph: 'lyrics', group: 'Actions', hint: 'L', run: () => this.actions.toggleLyrics() },
