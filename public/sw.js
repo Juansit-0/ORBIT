@@ -1,5 +1,5 @@
-const VERSION = 'orbit-v1'
-const SHELL = ['/', '/favicon.svg', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png']
+const VERSION = 'orbit-v2'
+const SHELL = ['/', '/app/', '/favicon.svg', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()))
@@ -14,14 +14,19 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+function shellFor(url) {
+  return url.pathname.startsWith('/app') ? '/app/' : '/'
+}
+
 async function networkFirst(request) {
   const cache = await caches.open(VERSION)
+  const shell = shellFor(new URL(request.url))
   try {
     const response = await fetch(request)
-    if (response.ok) cache.put('/', response.clone())
+    if (response.ok) cache.put(shell, response.clone())
     return response
   } catch {
-    return (await cache.match('/')) ?? Response.error()
+    return (await cache.match(shell)) ?? Response.error()
   }
 }
 

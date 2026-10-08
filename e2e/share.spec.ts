@@ -26,7 +26,7 @@ test.describe('sharing playlists', () => {
   })
 
   test('explains a broken link', async ({ orbit, page }) => {
-    await page.goto('/?plan=broken!!')
+    await page.goto('/app/?plan=broken!!')
     await expect(orbit.toast('This share link is broken')).toBeVisible()
     expect(await orbit.titles()).toEqual(demoTitles)
   })

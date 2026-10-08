@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import { loadEnv, type Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 
@@ -32,6 +33,14 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [localApi()],
     server: { port: 5199 },
+    build: {
+      rollupOptions: {
+        input: {
+          landing: fileURLToPath(new URL('./index.html', import.meta.url)),
+          app: fileURLToPath(new URL('./app/index.html', import.meta.url)),
+        },
+      },
+    },
     test: {
       include: ['tests/unit/**/*.test.ts'],
       environment: 'node',
