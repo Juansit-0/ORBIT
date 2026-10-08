@@ -10,8 +10,6 @@ test.describe('choosing a music service', () => {
     await expect(page.getByText('Coming soon. Apple Music needs a developer key')).toBeVisible()
     await page.locator('[data-service="deezer"]').click()
     await expect(page.getByText('Coming soon. Deezer is not accepting new apps')).toBeVisible()
-    await page.locator('[data-service="spotify"]').click()
-    await expect(page.getByText('Spotify is not set up on this copy of Orbit yet.')).toBeVisible()
     await expect(page.locator('#panel-now')).toHaveCount(0)
     await page.locator('[data-service="youtube"]').click()
     await expect(page.locator('.waypoint').first()).toBeVisible()

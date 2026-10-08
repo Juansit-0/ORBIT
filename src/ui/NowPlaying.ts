@@ -47,6 +47,7 @@ export class NowPlaying {
   private revealListener: ((shown: boolean) => void) | null = null
   private lastShown: boolean | null = null
   private lastVolume = 80
+  private fullLabel = 'Full track'
 
   constructor(app: PlayerApp) {
     this.app = app
@@ -156,6 +157,11 @@ export class NowPlaying {
       el('span', { class: 'deck__artist-name', text: artist, attrs: { title: artist } }),
       album ? el('span', { class: 'deck__album', text: album }) : '',
     )
+  }
+
+  setFullLabel(label: string): void {
+    this.fullLabel = label
+    this.render(this.app.playback.state)
   }
 
   mountLyrics(pane: HTMLElement): void {
@@ -354,7 +360,7 @@ export class NowPlaying {
       state.status === 'loading' && song
         ? 'Tuning in…'
         : state.source === 'full'
-          ? 'Full track'
+          ? this.fullLabel
           : state.source === 'preview'
             ? '30 s preview'
             : ''

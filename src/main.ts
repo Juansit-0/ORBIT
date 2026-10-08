@@ -31,6 +31,10 @@ import { searchSongs } from './services/searchService.ts'
 import { registerServiceWorker } from './services/serviceWorker.ts'
 import { PROVIDER_NAMES, services, type Provider } from './services/provider.ts'
 import { ProviderGate } from './ui/ProviderGate.ts'
+import { SpotifyAuth, SpotifyAuthError } from './services/spotifyAuth.ts'
+import { fetchAccount, playOnDevice, resolveSpotifyUris } from './services/spotifyApi.ts'
+import { loadSpotifySdk, SpotifyPlayer } from './player/SpotifyPlayer.ts'
+import { ServiceError } from './services/http.ts'
 import { loadLibrary, loadPlaylist, loadPrefs, savePrefs } from './services/storage.ts'
 import { showToast } from './ui/components/toast.ts'
 import { mountToasts } from './ui/components/toast.ts'
@@ -58,7 +62,7 @@ import { bindShortcuts, createShortcutHelp } from './ui/shortcuts.ts'
 const root = document.querySelector<HTMLDivElement>('#app')
 registerServiceWorker(import.meta.env.PROD)
 
-function boot(root: HTMLDivElement, provider: Provider): void {
+function boot(root: HTMLDivElement, provider: Provider, spotify: SpotifyAuth | null): void {
   const playlist = new Playlist()
   const savedLibrary = loadLibrary()
   if (!savedLibrary) {
@@ -71,14 +75,35 @@ function boot(root: HTMLDivElement, provider: Provider): void {
   const monitor = new Monitor()
   const fake = import.meta.env.VITE_PLAYER === 'fake'
   const fakePlayer = fake ? new FakePlayer() : null
-  const full: PlayerAdapter = fakePlayer ?? new YouTubePlayer(monitor.host)
+  const spotifyToken = () => (spotify ? spotify.accessToken() : Promise.reject(new SpotifyAuthError('expired', 'Spotify is not linked.')))
+  const useYouTube = () => {
+    savePrefs({ provider: 'youtube' })
+    location.reload()
+  }
+  const full: PlayerAdapter =
+    fakePlayer ??
+    (provider === 'spotify'
+      ? new SpotifyPlayer({
+          token: spotifyToken,
+          factory: loadSpotifySdk,
+          play: (deviceId, uri) => playOnDevice(spotifyToken, deviceId, uri),
+          onFatal: (reason) =>
+            showToast({
+              tone: 'error',
+              title: reason === 'account' ? 'Spotify needs a Premium account here' : 'Spotify could not start in this browser',
+              detail: reason === 'account' ? 'Spotify only lets Premium accounts play in other apps.' : 'Your browser may not support protected playback.',
+              duration: 12000,
+              action: { label: 'Use YouTube', run: useYouTube },
+            }),
+        })
+      : new YouTubePlayer(monitor.host))
   const previewPlayer = fakePlayer ? null : new PreviewPlayer()
   const preview: PlayerAdapter = fakePlayer ?? (previewPlayer as PreviewPlayer)
   const flavor = provider === 'youtubeMusic' ? 'music' : 'video'
   const playback = new PlaybackController(playlist, {
     full,
     preview,
-    resolve: (song, signal) => resolveVideoIds(song, signal, flavor),
+    resolve: provider === 'spotify' ? (song, signal) => resolveSpotifyUris(song, spotifyToken, signal) : (song, signal) => resolveVideoIds(song, signal, flavor),
     remembersTrackIds: provider === 'youtube',
   })
   document.documentElement.dataset.provider = provider
@@ -108,6 +133,8 @@ function boot(root: HTMLDivElement, provider: Provider): void {
   const lyrics = new LyricsPanel(app)
   const now = new NowPlaying(app)
   now.mountLyrics(lyrics.root)
+  if (provider === 'spotify') now.setFullLabel('On Spotify')
+  else if (provider === 'youtubeMusic') now.setFullLabel('YouTube Music')
   lyrics.onActiveLine((text) => now.setKaraoke(text))
   const liveChip = createLiveSoundChip(reactor)
   if (liveChip) now.tags.append(liveChip)
@@ -260,6 +287,17 @@ function boot(root: HTMLDivElement, provider: Provider): void {
         location.reload()
       },
     },
+    ...(provider === 'spotify' && spotify
+      ? [{
+          button: el('button', { class: 'icon-button', attrs: { type: 'button', title: 'Unlink your Spotify account from Orbit' } }, [icon('close')]),
+          label: 'Unlink Spotify',
+          run: () => {
+            spotify.signOut()
+            savePrefs({ provider: null })
+            location.reload()
+          },
+        }]
+      : []),
   ])
   sleep.subscribe(() => more.setBadge(sleepMenu.badgeText))
   more.setBadge(sleepMenu.badgeText)
@@ -269,7 +307,7 @@ function boot(root: HTMLDivElement, provider: Provider): void {
   const compact = window.matchMedia('(max-width: 920px)')
   const placeMonitor = () => monitor.place(compact.matches ? now.lensRect() : null)
   playback.subscribe((state) => {
-    monitor.setActive(state.source === 'full', state.song?.title ?? '')
+    monitor.setActive(state.source === 'full' && provider !== 'spotify', state.song?.title ?? '')
     requestAnimationFrame(placeMonitor)
   })
   window.addEventListener('resize', placeMonitor)
@@ -342,16 +380,62 @@ function boot(root: HTMLDivElement, provider: Provider): void {
   )
 }
 
-if (root) {
-  const chosen = loadPrefs().provider
-  if (chosen) boot(root, chosen)
-  else {
-    const gate = new ProviderGate(services(false), (provider) => {
-      savePrefs({ provider })
-      gate.root.remove()
-      boot(root, provider)
-    })
-    root.append(gate.root)
-    mountToasts(document.body)
+async function start(root: HTMLDivElement): Promise<void> {
+  const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID as string | undefined
+  const spotify = clientId ? new SpotifyAuth({ clientId, redirectUri: `${location.origin}/app/` }) : null
+  const params = new URLSearchParams(location.search)
+  let notice: { title: string; detail: string } | null = null
+  if (spotify && (params.has('code') || params.has('error'))) {
+    history.replaceState(null, '', location.pathname)
+    try {
+      if (await spotify.completeRedirect(params)) savePrefs({ provider: 'spotify' })
+    } catch (error) {
+      savePrefs({ provider: null })
+      notice = error instanceof SpotifyAuthError && error.kind === 'denied'
+        ? { title: 'Spotify was not linked', detail: 'You can try again or pick another service.' }
+        : { title: 'Spotify could not be linked', detail: 'Try again, or pick another service for now.' }
+    }
   }
+  let chosen = loadPrefs().provider
+  if (chosen === 'spotify') {
+    if (!spotify?.linked) chosen = null
+    else {
+      try {
+        const account = await fetchAccount(() => spotify.accessToken())
+        if (!account.premium) {
+          chosen = null
+          notice = { title: 'Spotify Premium is needed', detail: 'Spotify only lets Premium accounts play full songs in other apps. YouTube works for free.' }
+        }
+      } catch (error) {
+        chosen = null
+        notice = error instanceof ServiceError && error.kind === 'missing_key'
+          ? { title: 'This Spotify account is not on the list yet', detail: 'While Orbit is in Spotify development mode, the owner has to add your account first.' }
+          : { title: 'Spotify could not be reached', detail: 'Pick another service or try again later.' }
+      }
+    }
+    if (!chosen) savePrefs({ provider: null })
+  }
+  if (chosen) {
+    boot(root, chosen, spotify)
+    return
+  }
+  const gate = new ProviderGate(services(Boolean(spotify)), (provider) => {
+    if (provider === 'spotify' && spotify) {
+      if (spotify.linked) {
+        savePrefs({ provider })
+        location.reload()
+      } else {
+        void spotify.authorizeUrl().then((url) => location.assign(url))
+      }
+      return
+    }
+    savePrefs({ provider })
+    gate.root.remove()
+    boot(root, provider, spotify)
+  })
+  root.append(gate.root)
+  mountToasts(document.body)
+  if (notice) showToast({ tone: 'error', title: notice.title, detail: notice.detail, duration: 12000 })
 }
+
+if (root) void start(root)

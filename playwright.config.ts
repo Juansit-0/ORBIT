@@ -9,7 +9,7 @@ export default defineConfig({
   use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure', serviceWorkers: 'block' },
   webServer: {
     command: 'npx vite build --mode e2e && npx vite preview --port 4173 --strictPort',
-    env: { VITE_PLAYER: 'fake' },
+    env: { VITE_PLAYER: 'fake', VITE_SPOTIFY_CLIENT_ID: 'e2e-spotify' },
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

@@ -22,7 +22,7 @@ The linked list dock in the interface draws the live structure: `null`, `HEAD`, 
 - Next and previous, repeat off, all or one, and shuffle
 - Drag to reorder, or use the arrow buttons or `Alt` + arrow keys
 - Undo and redo for every change
-- Search the iTunes catalog and play full tracks through YouTube, with a 30 second preview fallback
+- Search the iTunes catalog and play full tracks through YouTube, YouTube Music (official audio) or your own Spotify Premium account, with a 30 second preview fallback
 - Search from the top bar: results open in a panel over the stage
 - Synced lyrics from LRCLIB under the song title, click a line to jump to it
 - Several playlists, a sleep timer, system media controls and keyboard shortcuts
