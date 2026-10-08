@@ -9,13 +9,13 @@ export type PlayerEvent =
 export type PlayerListener = (event: PlayerEvent) => void
 
 export interface PlayerSource {
-  videoId?: string
+  trackId?: string
   previewUrl?: string
   durationMs: number
 }
 
 export interface PlayerAdapter {
-  readonly kind: 'youtube' | 'preview' | 'fake'
+  readonly kind: 'youtube' | 'spotify' | 'preview' | 'fake'
   load(source: PlayerSource, autoplay: boolean): Promise<void>
   play(): void
   pause(): void

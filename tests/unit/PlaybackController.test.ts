@@ -89,7 +89,7 @@ describe('PlaybackController', () => {
 
   it('starts the first song on play', async () => {
     await controller.togglePlay()
-    expect(full.loaded?.videoId).toBe('v-a')
+    expect(full.loaded?.trackId).toBe('v-a')
     expect(controller.state).toMatchObject({ status: 'playing', source: 'full' })
     expect(playlist.current?.value.videoId).toBe('v-a')
   })
@@ -106,9 +106,9 @@ describe('PlaybackController', () => {
   it('moves forward and backward', async () => {
     await controller.togglePlay()
     expect(await controller.next()).toBe(true)
-    expect(full.loaded?.videoId).toBe('v-b')
+    expect(full.loaded?.trackId).toBe('v-b')
     expect(await controller.previous()).toBe(true)
-    expect(full.loaded?.videoId).toBe('v-a')
+    expect(full.loaded?.trackId).toBe('v-a')
     expect(await controller.previous()).toBe(false)
   })
 
@@ -116,7 +116,7 @@ describe('PlaybackController', () => {
     await controller.playNode(playlist.list.getNode(1)!.id)
     full.end()
     await flush()
-    expect(full.loaded?.videoId).toBe('v-c')
+    expect(full.loaded?.trackId).toBe('v-c')
     full.end()
     await flush()
     expect(controller.state.status).toBe('idle')
@@ -147,14 +147,14 @@ describe('PlaybackController', () => {
     await flush()
     expect(playlist.list.head?.value.unavailable).toBe(true)
     expect(notices[0]).toMatchObject({ type: 'unavailable' })
-    expect(full.loaded?.videoId).toBe('v-b')
+    expect(full.loaded?.trackId).toBe('v-b')
   })
 
   it('tries the next video candidate when YouTube refuses to embed one', async () => {
     await controller.togglePlay()
     full.emitter.emit({ type: 'error', reason: 'unplayable' })
     await flush()
-    expect(full.loaded?.videoId).toBe('v-a-alt')
+    expect(full.loaded?.trackId).toBe('v-a-alt')
     expect(playlist.current?.value.id).toBe('a')
     expect(playlist.current?.value.videoId).toBe('v-a-alt')
   })
@@ -178,7 +178,7 @@ describe('PlaybackController', () => {
     full.emitter.emit({ type: 'error', reason: 'unplayable' })
     await flush()
     expect(playlist.list.head?.value.unavailable).toBe(true)
-    expect(full.loaded?.videoId).toBe('v-b')
+    expect(full.loaded?.trackId).toBe('v-b')
   })
 
   it('marks a song unavailable when even its preview fails', async () => {
@@ -192,14 +192,14 @@ describe('PlaybackController', () => {
   it('gives an unavailable song another try when it is played on purpose', async () => {
     playlist.updateSong(playlist.list.head!.id, { unavailable: true })
     await controller.playNode(playlist.list.head!.id)
-    expect(full.loaded?.videoId).toBe('v-a')
+    expect(full.loaded?.trackId).toBe('v-a')
     expect(playlist.list.head?.value.unavailable).toBe(false)
   })
 
   it('tries the remembered working video first', async () => {
     playlist.updateSong(playlist.list.head!.id, { videoId: 'v-a-alt' })
     await controller.togglePlay()
-    expect(full.loaded?.videoId).toBe('v-a-alt')
+    expect(full.loaded?.trackId).toBe('v-a-alt')
   })
 
   it('stops when every song is unavailable', async () => {
@@ -213,7 +213,7 @@ describe('PlaybackController', () => {
   it('continues with the next song when the playing one is removed', async () => {
     await controller.togglePlay()
     await controller.remove(playlist.current!.id)
-    expect(full.loaded?.videoId).toBe('v-b')
+    expect(full.loaded?.trackId).toBe('v-b')
     expect(controller.state.status).toBe('playing')
   })
 
@@ -241,7 +241,7 @@ describe('PlaybackController', () => {
     await controller.next()
     release(['stale'])
     await first
-    expect(full.loaded?.videoId).toBe('v-b')
+    expect(full.loaded?.trackId).toBe('v-b')
   })
 
   it('reports the end of the plan and of loose songs', async () => {
@@ -285,7 +285,7 @@ describe('PlaybackController', () => {
   describe('songs outside the flight plan', () => {
     it('plays a song without touching the list', async () => {
       await controller.playSong({ ...song('x'), previewUrl: 'https://p/x' })
-      expect(full.loaded?.videoId).toBe('v-x')
+      expect(full.loaded?.trackId).toBe('v-x')
       expect(controller.state).toMatchObject({ status: 'playing', inPlan: false })
       expect(controller.state.song?.id).toBe('x')
       expect(playlist.size).toBe(3)
@@ -311,11 +311,11 @@ describe('PlaybackController', () => {
       await controller.playNode(playlist.list.getNode(1)!.id)
       await controller.playSong(song('x'))
       expect(await controller.next()).toBe(true)
-      expect(full.loaded?.videoId).toBe('v-b')
+      expect(full.loaded?.trackId).toBe('v-b')
       expect(controller.state.inPlan).toBe(true)
       await controller.playSong(song('y'))
       expect(await controller.previous()).toBe(true)
-      expect(full.loaded?.videoId).toBe('v-b')
+      expect(full.loaded?.trackId).toBe('v-b')
     })
 
     it('starts the flight plan from the head when nothing was playing before', async () => {
@@ -328,7 +328,7 @@ describe('PlaybackController', () => {
       await controller.playNode(playlist.list.head!.id)
       await controller.playSong(song('x'))
       await controller.remove(playlist.list.head!.id)
-      expect(full.loaded?.videoId).toBe('v-x')
+      expect(full.loaded?.trackId).toBe('v-x')
       expect(controller.state.song?.id).toBe('x')
     })
 
@@ -455,7 +455,7 @@ describe('DJ mix', () => {
     manual.advance(4000)
     expect(await mixed).toBe(true)
     expect(playlist.current?.value.id).toBe('b')
-    expect(full.loaded?.videoId).toBe('v-b')
+    expect(full.loaded?.trackId).toBe('v-b')
     expect(controller.state.mixing).toBe(false)
     expect(full.volume).toBe(0)
     manual.advance(2500)

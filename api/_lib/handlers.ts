@@ -157,8 +157,28 @@ async function youtubeError(response: Response): Promise<ApiResult> {
   return { status: 502, body: { error: 'upstream_error' } }
 }
 
+export interface MusicCandidate {
+  id: string
+  durationMs: number
+  channel: string
+  title: string
+}
+
+export function rankMusicVideos(candidates: MusicCandidate[], targetMs: number): string[] {
+  const tier = (candidate: MusicCandidate) => {
+    if (/ - topic$/i.test(candidate.channel.trim())) return 0
+    if (/official audio|\(audio\)|\[audio\]/i.test(candidate.title)) return 1
+    return 2
+  }
+  const distance = (candidate: MusicCandidate) => (targetMs > 0 && candidate.durationMs > 0 ? Math.abs(candidate.durationMs - targetMs) : 0)
+  const near = (candidate: MusicCandidate) => (targetMs > 0 && candidate.durationMs > 0 && distance(candidate) > 20000 ? 1 : 0)
+  return [...candidates]
+    .sort((a, b) => near(a) - near(b) || tier(a) - tier(b) || distance(a) - distance(b))
+    .map((candidate) => candidate.id)
+}
+
 export async function resolveVideo(
-  params: { title: string; artist: string; durationMs: number },
+  params: { title: string; artist: string; durationMs: number; flavor?: 'video' | 'music' },
   apiKey: string | undefined,
   fetcher: Fetcher = fetch,
 ): Promise<ApiResult> {
@@ -166,23 +186,24 @@ export async function resolveVideo(
   const artist = params.artist.trim()
   if (!title || !artist) return { status: 400, body: { error: 'missing_fields' } }
   if (!apiKey) return { status: 503, body: { error: 'missing_key' } }
-  const cacheKey = `${artist}::${title}`.toLowerCase()
+  const music = params.flavor === 'music'
+  const cacheKey = `${music ? 'music' : 'video'}::${artist}::${title}`.toLowerCase()
   const cached = resolveCache.get(cacheKey)
   if (cached) return { status: 200, body: { videoId: cached[0], candidates: cached } }
   try {
     const searchUrl = new URL(YOUTUBE_SEARCH_URL)
     searchUrl.search = new URLSearchParams({
-      part: 'id',
+      part: music ? 'snippet' : 'id',
       type: 'video',
       videoEmbeddable: 'true',
       videoCategoryId: '10',
       maxResults: '5',
-      q: `${artist} ${title} audio`,
+      q: music ? `${artist} ${title} topic` : `${artist} ${title} audio`,
       key: apiKey,
     }).toString()
     const searchResponse = await fetcher(searchUrl)
     if (!searchResponse.ok) return youtubeError(searchResponse)
-    const searchData = (await searchResponse.json()) as { items?: { id?: { videoId?: string } }[] }
+    const searchData = (await searchResponse.json()) as { items?: { id?: { videoId?: string }; snippet?: { channelTitle?: string; title?: string } }[] }
     const ids = (searchData.items ?? [])
       .map((item) => item.id?.videoId)
       .filter((id): id is string => Boolean(id))
@@ -197,7 +218,15 @@ export async function resolveVideo(
       const details = videosData.items?.find((item) => item.id === id)
       return { id, durationMs: parseIsoDuration(details?.contentDetails?.duration ?? '') }
     })
-    const ranked = rankVideos(candidates, params.durationMs)
+    const ranked = music
+      ? rankMusicVideos(
+          candidates.map((candidate) => {
+            const snippet = searchData.items?.find((item) => item.id?.videoId === candidate.id)?.snippet
+            return { ...candidate, channel: snippet?.channelTitle ?? '', title: snippet?.title ?? '' }
+          }),
+          params.durationMs,
+        )
+      : rankVideos(candidates, params.durationMs)
     if (ranked.length === 0) return { status: 404, body: { error: 'not_found' } }
     resolveCache.set(cacheKey, ranked)
     return { status: 200, body: { videoId: ranked[0], candidates: ranked } }

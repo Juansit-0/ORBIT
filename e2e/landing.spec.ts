@@ -6,10 +6,11 @@ test.describe('landing', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await page.getByRole('link', { name: 'Open Orbit' }).first().click()
     await expect(page).toHaveURL(/\/app\/$/)
-    await expect(page.locator('#panel-now')).toBeAttached()
+    await expect(page.getByRole('heading', { name: 'How do you want to listen?' })).toBeVisible()
   })
 
   test('sends old share links to the player', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('orbit:v1:prefs', JSON.stringify({ provider: 'youtube' })))
     await page.goto('/?plan=broken!!')
     await expect(page.getByText('This share link is broken')).toBeVisible()
     await expect(page).toHaveURL(/\/app\/$/)

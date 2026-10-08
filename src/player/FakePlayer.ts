@@ -30,7 +30,7 @@ export class FakePlayer implements PlayerAdapter {
       fail: () => this.emitter.emit({ type: 'error', reason: 'unplayable' }),
     }
     Object.defineProperties(controls, {
-      loaded: { get: () => this.source?.videoId ?? this.source?.previewUrl ?? null },
+      loaded: { get: () => this.source?.trackId ?? this.source?.previewUrl ?? null },
       playing: { get: () => this.playing },
       positionMs: { get: () => this.position },
       volume: { get: () => this.volume },

@@ -4,6 +4,7 @@ import './styles/layout.css'
 import './styles/components.css'
 import './styles/dock.css'
 import './styles/cinema.css'
+import './styles/gate.css'
 import { PlayerApp } from './app/PlayerApp.ts'
 import { Radio } from './app/Radio.ts'
 import { AudioReactor } from './audio/AudioReactor.ts'
@@ -28,6 +29,8 @@ import { PlayHistory } from './services/history.ts'
 import { surpriseSong } from './app/surprise.ts'
 import { searchSongs } from './services/searchService.ts'
 import { registerServiceWorker } from './services/serviceWorker.ts'
+import { PROVIDER_NAMES, services, type Provider } from './services/provider.ts'
+import { ProviderGate } from './ui/ProviderGate.ts'
 import { loadLibrary, loadPlaylist, loadPrefs, savePrefs } from './services/storage.ts'
 import { showToast } from './ui/components/toast.ts'
 import { mountToasts } from './ui/components/toast.ts'
@@ -55,7 +58,7 @@ import { bindShortcuts, createShortcutHelp } from './ui/shortcuts.ts'
 const root = document.querySelector<HTMLDivElement>('#app')
 registerServiceWorker(import.meta.env.PROD)
 
-if (root) {
+function boot(root: HTMLDivElement, provider: Provider): void {
   const playlist = new Playlist()
   const savedLibrary = loadLibrary()
   if (!savedLibrary) {
@@ -71,7 +74,14 @@ if (root) {
   const full: PlayerAdapter = fakePlayer ?? new YouTubePlayer(monitor.host)
   const previewPlayer = fakePlayer ? null : new PreviewPlayer()
   const preview: PlayerAdapter = fakePlayer ?? (previewPlayer as PreviewPlayer)
-  const playback = new PlaybackController(playlist, { full, preview, resolve: resolveVideoIds })
+  const flavor = provider === 'youtubeMusic' ? 'music' : 'video'
+  const playback = new PlaybackController(playlist, {
+    full,
+    preview,
+    resolve: (song, signal) => resolveVideoIds(song, signal, flavor),
+    remembersTrackIds: provider === 'youtube',
+  })
+  document.documentElement.dataset.provider = provider
   const app = new PlayerApp(playlist, playback, library)
   const reactor = new AudioReactor(app, previewPlayer?.element ?? null)
   const prefs = loadPrefs()
@@ -242,6 +252,14 @@ if (root) {
     { button: sleepMenu.button, label: 'Sleep timer', panel: sleepMenu.panel },
     { button: settings.button, label: 'Settings', panel: settings.panel },
     { button: help.button, label: 'Keyboard shortcuts', panel: help.panel },
+    {
+      button: el('button', { class: 'icon-button', attrs: { type: 'button', title: 'Choose another music service' } }, [icon('music')]),
+      label: `Listening with ${PROVIDER_NAMES[provider]} · Change`,
+      run: () => {
+        savePrefs({ provider: null })
+        location.reload()
+      },
+    },
   ])
   sleep.subscribe(() => more.setBadge(sleepMenu.badgeText))
   more.setBadge(sleepMenu.badgeText)
@@ -322,4 +340,18 @@ if (root) {
     },
     help.panel,
   )
+}
+
+if (root) {
+  const chosen = loadPrefs().provider
+  if (chosen) boot(root, chosen)
+  else {
+    const gate = new ProviderGate(services(false), (provider) => {
+      savePrefs({ provider })
+      gate.root.remove()
+      boot(root, provider)
+    })
+    root.append(gate.root)
+    mountToasts(document.body)
+  }
 }
