@@ -4,7 +4,8 @@ import { icon } from './icons.ts'
 export interface MoreItem {
   button: HTMLButtonElement
   label: string
-  panel: HTMLElement
+  panel?: HTMLElement
+  run?: () => void
 }
 
 export class MoreMenu {
@@ -26,11 +27,12 @@ export class MoreMenu {
       item.classList.remove('icon-button')
       item.classList.add('more__item')
       item.setAttribute('role', 'menuitem')
-      item.setAttribute('aria-haspopup', 'dialog')
+      if (entry.panel) item.setAttribute('aria-haspopup', 'dialog')
       item.append(el('span', { class: 'more__label', text: entry.label }))
       item.addEventListener('click', () => {
         this.panel.hidePopover()
-        entry.panel.showPopover()
+        entry.panel?.showPopover()
+        entry.run?.()
       })
       this.items.push(item)
       list.append(item)

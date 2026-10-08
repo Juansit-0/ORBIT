@@ -20,13 +20,13 @@ export class YouTubePlayer implements PlayerAdapter {
   }
 
   async load(source: PlayerSource, autoplay: boolean): Promise<void> {
-    if (!source.videoId) throw new Error('A videoId is required')
+    if (!source.trackId) throw new Error('A trackId is required')
     this.durationHint = source.durationMs
     this.emitter.emit({ type: 'state', state: 'loading' })
     const player = await this.ensurePlayer()
-    if (autoplay) player.loadVideoById(source.videoId)
+    if (autoplay) player.loadVideoById(source.trackId)
     else {
-      player.cueVideoById(source.videoId)
+      player.cueVideoById(source.trackId)
       this.emitter.emit({ type: 'state', state: 'paused' })
     }
     this.emitter.emit({ type: 'progress', currentMs: 0, durationMs: this.durationHint })

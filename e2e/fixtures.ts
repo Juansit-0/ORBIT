@@ -55,10 +55,18 @@ export interface ApiMocks {
   charts: 'ok' | 'flaky'
 }
 
-export const test = base.extend<{ mocks: ApiMocks; listShown: boolean; orbit: OrbitPage }>({
+export const test = base.extend<{ mocks: ApiMocks; listShown: boolean; provider: string | null; orbit: OrbitPage }>({
   mocks: [{ resolve: 'ok', charts: 'ok' }, { option: true }],
   listShown: [true, { option: true }],
-  orbit: async ({ page, mocks, listShown }, use) => {
+  provider: ['youtube', { option: true }],
+  orbit: async ({ page, mocks, listShown, provider }, use) => {
+    if (provider) {
+      await page.addInitScript((chosen) => {
+        const key = 'orbit:v1:prefs'
+        const prefs = JSON.parse(localStorage.getItem(key) ?? '{}') as Record<string, unknown>
+        if (prefs.provider === undefined) localStorage.setItem(key, JSON.stringify({ ...prefs, provider: chosen }))
+      }, provider)
+    }
     if (listShown) {
       await page.addInitScript(() => {
         const key = 'orbit:v1:prefs'
@@ -110,7 +118,7 @@ export const test = base.extend<{ mocks: ApiMocks; listShown: boolean; orbit: Or
       })
     })
     await page.goto('/app/')
-    await expect(page.locator('.waypoint').first()).toBeAttached()
+    if (provider) await expect(page.locator('.waypoint').first()).toBeAttached()
     await use(new OrbitPage(page))
   },
 })

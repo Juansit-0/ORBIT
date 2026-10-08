@@ -32,6 +32,7 @@ export interface PlaybackDeps {
   preview: PlayerAdapter
   resolve: (song: Song, signal: AbortSignal) => Promise<string[]>
   mixFader?: VolumeFader
+  remembersTrackIds?: boolean
 }
 
 type StateListener = (state: PlaybackState) => void
@@ -80,6 +81,10 @@ export class PlaybackController {
     this.snapshot.song = playlist.current?.value ?? null
     this.snapshot.inPlan = Boolean(playlist.current)
     playlist.subscribe(() => this.update({}))
+  }
+
+  private get remembers(): boolean {
+    return this.deps.remembersTrackIds !== false
   }
 
   get state(): PlaybackState {
@@ -353,12 +358,13 @@ export class PlaybackController {
       fallbackReason = kind === 'quota' || kind === 'missing_key' || kind === 'not_found' ? kind : 'network'
     }
     if (token !== this.loadToken) return
-    if (song.videoId) ids = [song.videoId, ...ids.filter((id) => id !== song.videoId)]
-    const videoId = ids[0]
-    if (videoId) {
+    const remembered = this.remembers ? song.videoId : undefined
+    if (remembered) ids = [remembered, ...ids.filter((id) => id !== remembered)]
+    const trackId = ids[0]
+    if (trackId) {
       this.attempts.set(node.id, { ids, index: 0 })
-      if (song.videoId !== videoId) this.patchSong(node, { videoId })
-      await this.start(this.deps.full, { videoId, durationMs: song.durationMs }, node, 'full', autoplay, token)
+      if (this.remembers && song.videoId !== trackId) this.patchSong(node, { videoId: trackId })
+      await this.start(this.deps.full, { trackId, durationMs: song.durationMs }, node, 'full', autoplay, token)
       return
     }
     await this.fallbackToPreview(node, fallbackReason ?? 'network', autoplay, token)
@@ -388,7 +394,7 @@ export class PlaybackController {
 
   private async start(
     adapter: PlayerAdapter,
-    source: { videoId?: string; previewUrl?: string; durationMs: number },
+    source: { trackId?: string; previewUrl?: string; durationMs: number },
     node: SongNode,
     kind: SourceKind,
     autoplay: boolean,
@@ -469,9 +475,9 @@ export class PlaybackController {
     const nextId = attempt ? attempt.ids[attempt.index + 1] : undefined
     if (attempt && nextId) {
       attempt.index += 1
-      this.patchSong(node, { videoId: nextId })
+      if (this.remembers) this.patchSong(node, { videoId: nextId })
       this.update({ status: 'loading' })
-      await this.start(this.deps.full, { videoId: nextId, durationMs: node.value.durationMs }, node, 'full', true, token)
+      await this.start(this.deps.full, { trackId: nextId, durationMs: node.value.durationMs }, node, 'full', true, token)
       return
     }
     this.attempts.delete(node.id)

@@ -127,6 +127,24 @@ describe('resolveVideo', () => {
     expect(fetcher).toHaveBeenCalledTimes(2)
   })
 
+  it('asks for the official audio when the music flavor is used, cached apart from videos', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ items: [
+        { id: { videoId: 'clip' }, snippet: { channelTitle: 'DaftPunkVEVO', title: 'Get Lucky (Official Video)' } },
+        { id: { videoId: 'topic' }, snippet: { channelTitle: 'Daft Punk - Topic', title: 'Get Lucky' } },
+      ] }))
+      .mockResolvedValueOnce(jsonResponse({ items: [
+        { id: 'clip', contentDetails: { duration: 'PT4M8S' } },
+        { id: 'topic', contentDetails: { duration: 'PT4M9S' } },
+      ] }))
+    const result = await resolveVideo({ ...params, flavor: 'music' }, 'k', fetcher)
+    expect(result.body).toEqual({ videoId: 'topic', candidates: ['topic', 'clip'] })
+    const url = String(fetcher.mock.calls[0]?.[0])
+    expect(url).toContain('part=snippet')
+    expect(url).toContain('topic')
+  })
+
   it('maps quota errors to 429', async () => {
     const fetcher = vi
       .fn()
@@ -203,5 +221,29 @@ describe('chartSongs', () => {
     expect(chartCountry('es')).toBe('es')
     expect(chartCountry('es-CO')).toBe('us')
     expect(chartCountry(null)).toBe('us')
+  })
+})
+
+import { rankMusicVideos } from '../../api/_lib/handlers.ts'
+
+describe('rankMusicVideos', () => {
+  it('prefers the artist topic channel, then official audio, close to the song length', () => {
+    const ranked = rankMusicVideos(
+      [
+        { id: 'clip', durationMs: 369500, channel: 'DaftPunkVEVO', title: 'Daft Punk - Get Lucky (Official Video)' },
+        { id: 'audio', durationMs: 368000, channel: 'Daft Punk', title: 'Get Lucky (Official Audio)' },
+        { id: 'topic', durationMs: 370000, channel: 'Daft Punk - Topic', title: 'Get Lucky' },
+        { id: 'short', durationMs: 120000, channel: 'Random - Topic', title: 'Get Lucky cover' },
+      ],
+      369000,
+    )
+    expect(ranked).toEqual(['topic', 'audio', 'clip', 'short'])
+  })
+
+  it('falls back to the length when nothing is marked as audio', () => {
+    expect(rankMusicVideos([
+      { id: 'a', durationMs: 300000, channel: 'x', title: 'one' },
+      { id: 'b', durationMs: 200000, channel: 'y', title: 'two' },
+    ], 205000)).toEqual(['b', 'a'])
   })
 })
