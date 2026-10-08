@@ -51,6 +51,8 @@ cp .env.example .env
 npm run dev
 ```
 
+The landing page is at `/` and the player at `/app/`.
+
 ## Test it
 
 ```bash

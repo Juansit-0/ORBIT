@@ -109,7 +109,7 @@ export const test = base.extend<{ mocks: ApiMocks; listShown: boolean; orbit: Or
         },
       })
     })
-    await page.goto('/')
+    await page.goto('/app/')
     await expect(page.locator('.waypoint').first()).toBeAttached()
     await use(new OrbitPage(page))
   },

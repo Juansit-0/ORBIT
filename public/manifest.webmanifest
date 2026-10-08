@@ -3,7 +3,7 @@
   "short_name": "Orbit",
   "description": "A music player built on a doubly linked list. Queue any song at the start, the end or an exact position and play it in full.",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/app/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#E8F1F8",
