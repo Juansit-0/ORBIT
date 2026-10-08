@@ -31,3 +31,13 @@ test.describe('choosing a music service', () => {
     await expect(page.getByRole('heading', { name: 'How do you want to listen?' })).toBeVisible()
   })
 })
+
+test.describe('starting from the landing page', () => {
+  test.use({ provider: null })
+
+  test('a service link skips the choice screen', async ({ page }) => {
+    await page.goto('/app/?service=youtubeMusic')
+    await expect(page.locator('html')).toHaveAttribute('data-provider', 'youtubeMusic')
+    await expect(page).toHaveURL(/\/app\/$/)
+  })
+})
