@@ -28,9 +28,24 @@ npm install
 npm run dev
 ```
 
+## Link Spotify Premium (optional)
+
+Orbit can play through a listener's own Spotify Premium account. Spotify needs Orbit to be registered once:
+
+1. Open https://developer.spotify.com/dashboard and click **Create app**.
+2. Name it `Orbit`, and under **Which API/SDKs are you planning to use?** tick **Web API** and **Web Playback SDK**.
+3. Add these **Redirect URIs** exactly:
+   - `http://127.0.0.1:5199/app/` for local use (Spotify does not accept `localhost`, so open Orbit at `http://127.0.0.1:5199/app/`)
+   - `https://<your-vercel-domain>/app/` once deployed
+4. Save, open **Settings**, and copy the **Client ID**. No client secret is needed: Orbit uses the PKCE flow in the browser.
+5. Open **User Management** and add the name and email of every Spotify account that should be able to link, for example yours and your teacher's. While the app is in development mode Spotify only allows up to 25 accounts added here.
+6. Paste the Client ID after `VITE_SPOTIFY_CLIENT_ID=` in `.env` and restart `npm run dev`.
+
+Only Premium accounts can play full songs in other apps. Free accounts, accounts that are not on the list, or browsers without protected playback get a clear message and can continue with YouTube.
+
 ## Deploy to Vercel
 
-Add `YOUTUBE_API_KEY` under **Project Settings > Environment Variables** and redeploy.
+Add `YOUTUBE_API_KEY` and, if you use Spotify, `VITE_SPOTIFY_CLIENT_ID` under **Project Settings > Environment Variables** and redeploy. Add the Vercel URL followed by `/app/` as a Redirect URI in the Spotify dashboard.
 
 ## Quota
 
