@@ -29,7 +29,7 @@ import { PlayHistory } from './services/history.ts'
 import { surpriseSong } from './app/surprise.ts'
 import { searchSongs } from './services/searchService.ts'
 import { registerServiceWorker } from './services/serviceWorker.ts'
-import { PROVIDER_NAMES, services, type Provider } from './services/provider.ts'
+import { isProvider, PROVIDER_NAMES, services, type Provider } from './services/provider.ts'
 import { ProviderGate } from './ui/ProviderGate.ts'
 import { SpotifyAuth, SpotifyAuthError } from './services/spotifyAuth.ts'
 import { fetchAccount, playOnDevice, resolveSpotifyUris } from './services/spotifyApi.ts'
@@ -394,6 +394,17 @@ async function start(root: HTMLDivElement): Promise<void> {
       notice = error instanceof SpotifyAuthError && error.kind === 'denied'
         ? { title: 'Spotify was not linked', detail: 'You can try again or pick another service.' }
         : { title: 'Spotify could not be linked', detail: 'Try again, or pick another service for now.' }
+    }
+  }
+  const requested = params.get('service')
+  if (requested !== null) {
+    history.replaceState(null, '', location.pathname)
+    if (isProvider(requested)) {
+      if (requested === 'spotify' && spotify && !spotify.linked) {
+        location.assign(await spotify.authorizeUrl())
+        return
+      }
+      if (requested !== 'spotify' || spotify?.linked) savePrefs({ provider: requested })
     }
   }
   let chosen = loadPrefs().provider
