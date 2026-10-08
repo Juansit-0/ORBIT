@@ -579,7 +579,7 @@ body {
 }
 
 .dj-plot__in {
-  stroke: var(--burn);
+  stroke: var(--chart);
 }
 
 .dj-plot__mark {
@@ -590,7 +590,13 @@ body {
 .dj-plot__label {
   fill: var(--ink-2);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .dj-plot__label {
+    font-size: 15px;
+  }
 }
 
 .dj-plot__legend {
@@ -615,7 +621,7 @@ body {
 }
 
 .dj-plot__key--in::before {
-  background: var(--burn);
+  background: var(--chart);
 }
 
 .karaoke {
@@ -993,8 +999,15 @@ a.services__row .services__status::after {
     transition: none;
   }
 
-  .chain-demo__node[data-fresh='true'] {
+  .chain-demo__node[data-fresh='true'],
+  .stage__leader--drawn,
+  .orbit--docked .stage__frame {
     animation: none;
+  }
+
+  .stage__leader--drawn {
+    scale: 1 1;
+    opacity: 1;
   }
 }
 
