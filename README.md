@@ -2,6 +2,8 @@
 
 A music player built in TypeScript on top of a doubly linked list. Search any song, queue it at the start, the end or any position, and play it in full while a 3D particle planet reacts to the music and to your cursor.
 
+Live: https://orbit-ebon-nine.vercel.app (player at https://orbit-ebon-nine.vercel.app/app/)
+
 ## The doubly linked list
 
 | File | What it does |
