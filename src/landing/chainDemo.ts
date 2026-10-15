@@ -2,7 +2,9 @@ import { DoublyLinkedList } from '../core/DoublyLinkedList.ts'
 import type { ListNode } from '../core/ListNode.ts'
 import { el, setText } from '../ui/dom.ts'
 
-const POOL = ['Get Lucky', 'Blinding Lights', 'Dreams', 'Levitating', 'Viva La Vida', 'De Música Ligera', 'Bohemian Rhapsody', 'BIRDS OF A FEATHER']
+export function placeholderTitles(count: number): string[] {
+  return Array.from({ length: count }, (_, index) => `Track ${index + 1}`)
+}
 
 export class ChainDemo {
   readonly root: HTMLElement
@@ -13,15 +15,16 @@ export class ChainDemo {
   private readonly pointer: HTMLElement
   private nextSong = 3
   private fresh: ListNode<string> | null = null
+  private pool: string[] = []
+  private readonly actions: HTMLButtonElement[] = []
 
   constructor() {
-    for (const title of POOL.slice(0, 3)) this.list.addLast(title)
-    this.current = this.list.head
     this.chain = el('ol', { class: 'chain-demo__chain', attrs: { 'aria-label': 'Doubly linked list' } })
     this.log = el('p', { class: 'chain-demo__log', attrs: { 'aria-live': 'polite' } })
     this.pointer = el('p', { class: 'chain-demo__pointer' })
     const action = (label: string, run: () => string) => {
-      const button = el('button', { class: 'chain-demo__action', text: label, attrs: { type: 'button' } })
+      const button = el('button', { class: 'chain-demo__action', text: label, attrs: { type: 'button', disabled: true } })
+      this.actions.push(button)
       button.addEventListener('click', () => {
         const message = run()
         this.render(true)
@@ -70,12 +73,23 @@ export class ChainDemo {
       ]),
       this.log,
     ])
-    setText(this.log, 'Try an operation. Every button calls the same doubly linked list the player uses.')
+    setText(this.log, 'Loading today\'s top songs…')
+    this.render()
+  }
+
+  load(titles: string[], note: string): void {
+    this.pool = titles.length >= 4 ? titles : [...titles, ...placeholderTitles(8)].slice(0, 8)
+    this.list.clear()
+    for (const title of this.pool.slice(0, 3)) this.list.addLast(title)
+    this.current = this.list.head
+    this.nextSong = 3
+    for (const button of this.actions) button.disabled = false
+    setText(this.log, note)
     this.render()
   }
 
   private take(): string {
-    const title = POOL[this.nextSong % POOL.length] as string
+    const title = this.pool[this.nextSong % this.pool.length] as string
     this.nextSong += 1
     return title
   }

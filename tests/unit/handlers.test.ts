@@ -247,3 +247,24 @@ describe('rankMusicVideos', () => {
     ], 205000)).toEqual(['b', 'a'])
   })
 })
+
+import { chartLimit } from '../../api/_lib/handlers.ts'
+
+describe('chart limit', () => {
+  it('accepts 1 to 25 songs and defaults to the full chart', () => {
+    expect(chartLimit('8')).toBe(8)
+    expect(chartLimit('0')).toBe(25)
+    expect(chartLimit('99')).toBe(25)
+    expect(chartLimit(null)).toBe(25)
+  })
+
+  it('only looks up the requested number of chart songs', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ feed: { results: ['1', '2', '3', '4'].map((id) => ({ id })) } }))
+      .mockResolvedValueOnce(jsonResponse({ results: [] }))
+    await chartSongs('us', fetcher, 2)
+    expect(String(fetcher.mock.calls[1]?.[0])).toContain('id=1%2C2')
+    expect(String(fetcher.mock.calls[1]?.[0])).not.toContain('3')
+  })
+})

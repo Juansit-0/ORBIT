@@ -10,7 +10,6 @@ import { Radio } from './app/Radio.ts'
 import { AudioReactor } from './audio/AudioReactor.ts'
 import { Playlist } from './core/Playlist.ts'
 import { PlaylistLibrary } from './core/PlaylistLibrary.ts'
-import { demoPlaylist } from './data/demoPlaylist.ts'
 import { FakePlayer } from './player/FakePlayer.ts'
 import { PlaybackController } from './player/PlaybackController.ts'
 import type { PlayerAdapter } from './player/PlayerAdapter.ts'
@@ -28,6 +27,7 @@ import { decodePlan } from './services/planCodec.ts'
 import { PlayHistory } from './services/history.ts'
 import { surpriseSong } from './app/surprise.ts'
 import { searchSongs } from './services/searchService.ts'
+import { starterSongs } from './services/chartsService.ts'
 import { registerServiceWorker } from './services/serviceWorker.ts'
 import { isProvider, PROVIDER_NAMES, services, type Provider } from './services/provider.ts'
 import { ProviderGate } from './ui/ProviderGate.ts'
@@ -65,10 +65,11 @@ registerServiceWorker(import.meta.env.PROD)
 function boot(root: HTMLDivElement, provider: Provider, spotify: SpotifyAuth | null): void {
   const playlist = new Playlist()
   const savedLibrary = loadLibrary()
+  let firstVisit = false
   if (!savedLibrary) {
     const saved = loadPlaylist()
     if (saved) playlist.restore(saved)
-    else for (const song of demoPlaylist) playlist.addLast(song)
+    else firstVisit = true
   }
   const library = new PlaylistLibrary(playlist, savedLibrary)
 
@@ -353,6 +354,15 @@ function boot(root: HTMLDivElement, provider: Provider, spotify: SpotifyAuth | n
         })
         .catch(() => showToast({ tone: 'error', title: 'The shared playlist could not be loaded', detail: 'Check your connection and open the link again.' }))
     }
+  }
+  if (firstVisit) {
+    queue.setStarting(true)
+    void starterSongs()
+      .then((songs) => {
+        if (playlist.isEmpty()) for (const song of songs) playlist.addLast(song)
+      })
+      .catch(() => undefined)
+      .finally(() => queue.setStarting(false))
   }
   mountScene(now.stage, playback, (scene) => {
     now.onCoverReveal((shown) => scene.setCoverShown(shown))

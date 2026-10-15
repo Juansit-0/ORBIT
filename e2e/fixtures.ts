@@ -1,5 +1,5 @@
 import { test as base, expect, type Locator, type Page } from '@playwright/test'
-import { demoPlaylist } from '../src/data/demoPlaylist.ts'
+import { demoPlaylist } from './demoSongs.ts'
 
 export const searchResults = [
   {
@@ -82,6 +82,8 @@ export const test = base.extend<{ mocks: ApiMocks; listShown: boolean; provider:
     })
     let chartCalls = 0
     await page.route('**/api/charts**', async (route) => {
+      const limit = new URL(route.request().url()).searchParams.get('limit')
+      if (limit) return route.fulfill({ json: { songs: demoPlaylist.slice(0, Number(limit)) } })
       chartCalls += 1
       if (mocks.charts === 'flaky' && chartCalls === 1) return route.fulfill({ status: 502, json: { error: 'upstream_error' } })
       return route.fulfill({ json: { songs: chartResults } })

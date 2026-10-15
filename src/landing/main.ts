@@ -5,7 +5,8 @@ import { etaFor, formatClock } from '../core/eta.ts'
 import { services } from '../services/provider.ts'
 import { el, setText } from '../ui/dom.ts'
 import { icon } from '../ui/icons.ts'
-import { ChainDemo } from './chainDemo.ts'
+import { ChainDemo, placeholderTitles } from './chainDemo.ts'
+import { starterSongs } from '../services/chartsService.ts'
 
 const REPO = 'https://github.com/Juansit-0/ORBIT'
 
@@ -29,13 +30,6 @@ const SAMPLE_LYRICS = [
   'Each one remembers who came before',
   'Press next and the pointer moves along',
   'The tail still waits for one song more',
-]
-
-const PLAN = [
-  { id: 'a', title: 'Get Lucky', artist: 'Daft Punk', durationMs: 369000 },
-  { id: 'b', title: 'Blinding Lights', artist: 'The Weeknd', durationMs: 200000 },
-  { id: 'c', title: 'Dreams', artist: 'Fleetwood Mac', durationMs: 254000 },
-  { id: 'd', title: 'De Música Ligera', artist: 'Soda Stereo', durationMs: 212000 },
 ]
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -158,13 +152,25 @@ function lyricsFigure(): HTMLElement {
   return figure
 }
 
-function landingFigure(): HTMLElement {
+interface PlanSong {
+  id: string
+  title: string
+  artist: string
+  durationMs: number
+}
+
+function landingFigure(songs: Promise<PlanSong[]>): HTMLElement {
   const list = el('ol', { class: 'plan', attrs: { 'aria-label': 'Sample flight plan' } })
-  const lands = el('p', { class: 'plan__lands' })
+  const lands = el('p', { class: 'plan__lands', text: 'Loading today\'s top songs…' })
+  const note = el('figcaption', { class: 'plan__note', text: 'A sample plan with the most played songs right now, timed from your clock.' })
+  let plan: PlanSong[] = []
   const render = () => {
+    const first = plan[0]
+    if (!first) return
     const now = Date.now()
-    const result = etaFor({ order: PLAN, currentId: 'a', positionMs: 141000, currentDurationMs: 369000, now, repeat: 'off' })
-    list.replaceChildren(...PLAN.map((song, index) => {
+    const position = Math.round(first.durationMs * 0.38)
+    const result = etaFor({ order: plan, currentId: first.id, positionMs: position, currentDurationMs: first.durationMs, now, repeat: 'off' })
+    list.replaceChildren(...plan.map((song, index) => {
       const start = result.starts.get(song.id)
       return el('li', { class: 'plan__row', attrs: { 'data-current': String(index === 0) } }, [
         el('span', { class: 'plan__dot', attrs: { 'aria-hidden': 'true' } }),
@@ -174,9 +180,17 @@ function landingFigure(): HTMLElement {
     }))
     setText(lands, result.landsAt === null ? '' : `Lands at ${formatClock(result.landsAt)}`)
   }
-  render()
-  window.setInterval(render, 30000)
-  return el('figure', { class: 'plan-figure' }, [lands, list, el('figcaption', { class: 'plan__note', text: 'A sample plan, timed from your clock right now.' })])
+  void songs.then((loaded) => {
+    plan = loaded.slice(0, 4)
+    if (plan.length === 0) {
+      setText(lands, '')
+      setText(note, 'Today\'s top songs could not be loaded, so there is no sample plan right now.')
+      return
+    }
+    render()
+    window.setInterval(render, 30000)
+  })
+  return el('figure', { class: 'plan-figure' }, [lands, list, note])
 }
 
 function servicesSection(): HTMLElement {
@@ -249,6 +263,11 @@ if (params.has('plan')) {
 } else if (root) {
   const orbit = stage()
   const chain = new ChainDemo()
+  const top = starterSongs().catch(() => [])
+  void top.then((songs) => {
+    if (songs.length > 0) chain.load(songs.map((song) => song.title), 'Try an operation. Every button calls the same doubly linked list the player uses, with today\'s most played songs.')
+    else chain.load(placeholderTitles(8), 'Today\'s top songs could not be loaded, so the demo uses numbered tracks. Every button calls the same doubly linked list the player uses.')
+  })
   const heroSection = hero()
   const flow = el('div', { class: 'orbit__flow' }, [
     heroSection,
@@ -265,7 +284,7 @@ if (params.has('plan')) {
     ], lyricsFigure()),
     chapter('eta', 'Know when the music lands.', [
       'Every song in the flight plan shows the time it will start, and the header tells you when the last one ends. Shuffle, skips and removed songs update it at once.',
-    ], landingFigure()),
+    ], landingFigure(top)),
   ])
   const main = el('main', { class: 'orbit' }, [flow, orbit.root])
   root.append(header(), main, servicesSection(), closing())

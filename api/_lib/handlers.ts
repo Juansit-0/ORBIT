@@ -105,14 +105,19 @@ async function chartIds(country: string, fetcher: Fetcher): Promise<string[] | n
   return (data.feed?.results ?? []).map((entry) => String(entry.id ?? '')).filter((id) => /^\d{1,12}$/.test(id))
 }
 
-export async function chartSongs(rawCountry: string | null, fetcher: Fetcher = fetch): Promise<ApiResult> {
+export function chartLimit(raw: string | null): number {
+  const value = Number(raw)
+  return Number.isInteger(value) && value >= 1 && value <= 25 ? value : 25
+}
+
+export async function chartSongs(rawCountry: string | null, fetcher: Fetcher = fetch, limit = 25): Promise<ApiResult> {
   const country = chartCountry(rawCountry)
   try {
     let ids = await chartIds(country, fetcher)
     if ((!ids || ids.length === 0) && country !== 'us') ids = await chartIds('us', fetcher)
     if (!ids) return { status: 502, body: { error: 'upstream_error' } }
     if (ids.length === 0) return { status: 200, body: { songs: [] } }
-    return await lookupSongs(ids.join(','), fetcher)
+    return await lookupSongs(ids.slice(0, limit).join(','), fetcher)
   } catch {
     return { status: 502, body: { error: 'upstream_error' } }
   }

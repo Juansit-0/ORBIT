@@ -1,4 +1,4 @@
-import type { Song } from '../core/types.ts'
+import type { Song } from '../src/core/types.ts'
 
 export const demoPlaylist: Song[] = [
   {

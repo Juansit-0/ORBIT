@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { demoPlaylist } from './demoSongs.ts'
 
 test.describe('landing page', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/charts**', (route) => route.fulfill({ json: { songs: demoPlaylist } }))
+  })
+
   test('scrolls with the mouse wheel and keeps the orbit beside the chapters', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/')
@@ -16,12 +21,13 @@ test.describe('landing page', () => {
     await page.goto('/')
     const demo = page.locator('.chain-demo')
     await expect(demo.locator('.chain-demo__node')).toHaveCount(3)
+    await expect(demo.locator('.chain-demo__node').first()).toContainText('Get Lucky')
     await demo.getByRole('button', { name: 'Insert at 2' }).click()
     await expect(demo.locator('.chain-demo__node')).toHaveCount(4)
-    await expect(demo.locator('.chain-demo__node').nth(1)).toContainText('Levitating')
-    await expect(demo.locator('.chain-demo__log')).toContainText('insertAt(2, "Levitating")')
+    await expect(demo.locator('.chain-demo__node').nth(1)).toContainText('Dreams')
+    await expect(demo.locator('.chain-demo__log')).toContainText('insertAt(2, "Dreams")')
     await demo.getByRole('button', { name: 'Next' }).click()
-    await expect(demo.locator('.chain-demo__pointer')).toHaveText('size 4 · current → Levitating')
+    await expect(demo.locator('.chain-demo__pointer')).toHaveText('size 4 · current → Dreams')
     await demo.getByRole('button', { name: 'Remove current' }).click()
     await expect(demo.locator('.chain-demo__node')).toHaveCount(3)
     await expect(demo.locator('.chain-demo__pointer')).toHaveText('size 3 · current → Blinding Lights')
@@ -40,5 +46,16 @@ test.describe('landing page', () => {
     await expect(page.getByRole('link', { name: 'Open Orbit' })).toHaveCount(3)
     await expect(page.locator('.services__row', { hasText: 'Apple Music' })).not.toHaveAttribute('href')
     await expect(page.getByRole('link', { name: 'Start, no account with YouTube Music' })).toHaveAttribute('href', '/app/?service=youtubeMusic')
+  })
+})
+
+test.describe('landing page without the charts', () => {
+  test('falls back to numbered tracks and explains why', async ({ page }) => {
+    await page.route('**/api/charts**', (route) => route.fulfill({ status: 502, json: { error: 'upstream_error' } }))
+    await page.goto('/')
+    const demo = page.locator('.chain-demo')
+    await expect(demo.locator('.chain-demo__node').first()).toContainText('Track 1')
+    await expect(demo.locator('.chain-demo__log')).toContainText('could not be loaded')
+    await expect(page.locator('.plan__note')).toContainText('could not be loaded')
   })
 })

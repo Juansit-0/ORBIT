@@ -6,7 +6,13 @@ export function countryFromLocale(locale: string | undefined): string {
   return /^[a-z]{2}$/i.test(region) ? region.toLowerCase() : 'us'
 }
 
-export async function chartSongs(country: string, signal?: AbortSignal): Promise<Song[]> {
-  const data = await getJson<{ songs: Song[] }>('/api/charts', { country }, signal)
+export const STARTER_SIZE = 8
+
+export async function chartSongs(country: string, signal?: AbortSignal, limit?: number): Promise<Song[]> {
+  const data = await getJson<{ songs: Song[] }>('/api/charts', limit ? { country, limit: String(limit) } : { country }, signal)
   return data.songs
+}
+
+export function starterSongs(signal?: AbortSignal): Promise<Song[]> {
+  return chartSongs(countryFromLocale(globalThis.navigator?.language), signal, STARTER_SIZE)
 }

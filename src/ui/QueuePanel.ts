@@ -52,7 +52,7 @@ export class QueuePanel {
       attrs: { id: 'queue-filter', type: 'search', placeholder: 'Filter the flight plan', autocomplete: 'off' },
     })
     this.list = el('ol', { class: 'queue', attrs: { 'aria-label': 'Songs in play order' } })
-    this.empty = el('div', { class: 'empty' }, [
+    this.empty = el('div', { class: 'empty', attrs: { 'aria-live': 'polite' } }, [
       icon('orbit', 'icon empty__icon'),
       el('p', { class: 'empty__title', text: 'The flight plan is empty' }),
       el('p', { class: 'empty__text', text: 'Search for a song and add it first, last or at an exact position.' }),
@@ -98,6 +98,13 @@ export class QueuePanel {
       this.renderEta()
     })
     this.render()
+  }
+
+  setStarting(starting: boolean): void {
+    const title = this.empty.querySelector('.empty__title')
+    const text = this.empty.querySelector('.empty__text')
+    if (title) title.textContent = starting ? 'Loading today\'s top songs' : 'The flight plan is empty'
+    if (text) text.textContent = starting ? 'Your first flight plan starts with the most played songs in your country.' : 'Search for a song and add it first, last or at an exact position.'
   }
 
   focusFilter(): void {
