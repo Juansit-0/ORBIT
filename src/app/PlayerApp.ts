@@ -27,14 +27,16 @@ export class PlayerApp {
 
   async addFirst(song: Song): Promise<void> {
     const duplicate = this.playlist.containsSong(song.id)
-    await this.history.run(this.insertCommand(() => 0, song, `Add ${quoted(song.title)} first`))
-    this.confirmAdd(song, 1, duplicate)
+    const insert = this.insertCommand(() => 0, song, `Add ${quoted(song.title)} first`)
+    await this.history.run(insert.command)
+    this.confirmAdd(song, insert.position(), duplicate)
   }
 
   async addLast(song: Song): Promise<void> {
     const duplicate = this.playlist.containsSong(song.id)
-    await this.history.run(this.insertCommand(() => this.playlist.size, song, `Add ${quoted(song.title)} last`))
-    this.confirmAdd(song, this.playlist.size, duplicate)
+    const insert = this.insertCommand(() => this.playlist.size, song, `Add ${quoted(song.title)} last`)
+    await this.history.run(insert.command)
+    this.confirmAdd(song, insert.position(), duplicate)
   }
 
   insertAt(position: number, song: Song): InsertResult {
@@ -43,9 +45,8 @@ export class PlayerApp {
       return { ok: false, error: max === 1 ? 'The list is empty, so the only position is 1.' : `Choose a position from 1 to ${max}.` }
     }
     const duplicate = this.playlist.containsSong(song.id)
-    void this.history
-      .run(this.insertCommand(() => position - 1, song, `Insert ${quoted(song.title)} at ${position}`))
-      .then(() => this.confirmAdd(song, position, duplicate))
+    const insert = this.insertCommand(() => position - 1, song, `Insert ${quoted(song.title)} at ${position}`)
+    void this.history.run(insert.command).then(() => this.confirmAdd(song, insert.position(), duplicate))
     return { ok: true, position }
   }
 
@@ -55,16 +56,30 @@ export class PlayerApp {
     const position = this.playlist.list.indexOf(node) + 1
     const outcome: { result: RemoveResult | null } = { result: null }
     let index = position - 1
-    await this.history.run({
-      label: `Remove ${quoted(node.value.title)}`,
-      execute: async () => {
-        index = this.playlist.list.indexOf(node)
-        outcome.result = await this.playback.remove(node.id)
-      },
-      revert: () => {
-        this.playlist.insertNodeAt(Math.min(index, this.playlist.size), node)
-      },
-    })
+    let wasCurrent = false
+    try {
+      await this.history.run({
+        label: `Remove ${quoted(node.value.title)}`,
+        execute: async () => {
+          index = this.playlist.list.indexOf(node)
+          if (index === -1) throw new Error('The song is no longer in the flight plan')
+          outcome.result = await this.playback.remove(node.id)
+          if (!outcome.result) throw new Error('The song is no longer in the flight plan')
+          wasCurrent = outcome.result.wasCurrent
+        },
+        revert: async () => {
+          this.playlist.insertNodeAt(Math.min(index, this.playlist.size), node)
+          if (!wasCurrent) return
+          if (this.playback.isPlaying) await this.playback.playNode(node.id)
+          else {
+            this.playlist.select(node.id)
+            this.playback.syncWithPlaylist()
+          }
+        },
+      })
+    } catch {
+      return
+    }
     const result = outcome.result
     if (!result) return
     const detail = result.wasCurrent
@@ -82,12 +97,26 @@ export class PlayerApp {
 
   async move(fromIndex: number, toIndex: number): Promise<void> {
     if (fromIndex === toIndex || toIndex < 0 || toIndex >= this.playlist.size) return
-    const title = this.playlist.list.get(fromIndex)?.title ?? 'song'
-    await this.history.run({
-      label: `Move ${quoted(title)} to ${toIndex + 1}`,
-      execute: () => this.playlist.move(fromIndex, toIndex),
-      revert: () => this.playlist.move(toIndex, fromIndex),
-    })
+    const node = this.playlist.list.getNode(fromIndex)
+    if (!node) return
+    let from = fromIndex
+    try {
+      await this.history.run({
+        label: `Move ${quoted(node.value.title)} to ${toIndex + 1}`,
+        execute: () => {
+          from = this.playlist.list.indexOf(node)
+          if (from === -1) throw new Error('The song is no longer in the flight plan')
+          const to = Math.min(toIndex, this.playlist.size - 1)
+          if (from !== to) this.playlist.move(from, to)
+        },
+        revert: () => {
+          const at = this.playlist.list.indexOf(node)
+          if (at !== -1) this.playlist.move(at, Math.min(from, this.playlist.size - 1))
+        },
+      })
+    } catch {
+      return
+    }
   }
 
   async moveAfterCurrent(nodeId: string): Promise<void> {
@@ -119,19 +148,20 @@ export class PlayerApp {
     showToast({ tone: 'info', title: command ? `Redid: ${command.label}` : 'Nothing to redo' })
   }
 
-  private insertCommand(target: () => number, song: Song, label: string): Command {
+  private insertCommand(target: () => number, song: Song, label: string): { command: Command; position: () => number } {
     let node: SongNode | null = null
     let index = -1
-    return {
+    const command: Command = {
       label,
       execute: () => {
-        if (index === -1) index = Math.min(target(), this.playlist.size)
+        index = Math.min(index === -1 ? target() : index, this.playlist.size)
         node = node ? this.playlist.insertNodeAt(index, node) : this.playlist.insertAt(index, song)
       },
       revert: async () => {
         if (node) await this.playback.remove(node.id)
       },
     }
+    return { command, position: () => (node ? this.playlist.list.indexOf(node) + 1 : index + 1) }
   }
 
   async play(nodeId: string): Promise<void> {
@@ -142,8 +172,9 @@ export class PlayerApp {
     const duplicate = this.playlist.containsSong(song.id)
     const current = this.playlist.current
     const target = () => (this.playlist.current ? this.playlist.indexOfCurrent() + 1 : this.playlist.size)
-    await this.history.run(this.insertCommand(target, song, `Play ${quoted(song.title)} next`))
-    const index = current ? this.playlist.indexOfCurrent() + 2 : this.playlist.size
+    const insert = this.insertCommand(target, song, `Play ${quoted(song.title)} next`)
+    await this.history.run(insert.command)
+    const index = insert.position()
     showToast({
       tone: 'success',
       title: duplicate ? `${quoted(song.title)} plays next again` : `${quoted(song.title)} plays next`,
