@@ -15,7 +15,7 @@ test.describe('sleep timer', () => {
 
   test('fades out and pauses when the countdown ends', async ({ page, orbit }) => {
     await page.clock.install()
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeAttached()
     await orbit.play()
     await orbit.openMenu('Sleep timer')

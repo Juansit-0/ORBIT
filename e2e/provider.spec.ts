@@ -13,7 +13,7 @@ test.describe('choosing a music service', () => {
     await expect(page.locator('#panel-now')).toHaveCount(0)
     await page.locator('[data-service="youtube"]').click()
     await expect(page.locator('.waypoint').first()).toBeVisible()
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('.waypoint').first()).toBeVisible()
     await expect(page.getByRole('heading', { name: 'How do you want to listen?' })).toHaveCount(0)
   })

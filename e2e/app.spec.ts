@@ -38,7 +38,7 @@ test.describe('persistence', () => {
     await orbit.row('Levitating').locator('.waypoint__main').click()
     await orbit.transport('Repeat off').click()
     const before = await orbit.titles()
-    await orbit.page.reload()
+    await orbit.page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeVisible()
     expect(await orbit.titles()).toEqual(before)
     await expect(orbit.row('Levitating')).toHaveAttribute('aria-current', 'true')

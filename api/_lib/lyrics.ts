@@ -1,4 +1,5 @@
 import type { ApiResult } from './handlers.js'
+import { BoundedCache } from './boundedCache.js'
 
 export interface LyricLine {
   timeMs: number
@@ -24,7 +25,7 @@ type Fetcher = typeof fetch
 
 const LRCLIB = 'https://lrclib.net/api'
 const HEADERS = { 'user-agent': 'Orbit music player (github.com/Juansit-0/ORBIT)' }
-const cache = new Map<string, LyricsPayload>()
+const cache = new BoundedCache<string, LyricsPayload>(500)
 
 export function parseLrc(source: string): LyricLine[] {
   const lines: LyricLine[] = []
@@ -69,6 +70,7 @@ export async function fetchLyrics(
   const title = params.title.trim()
   const artist = params.artist.trim()
   if (!title || !artist) return { status: 400, body: { error: 'missing_fields' } }
+  if (title.length > 200 || artist.length > 200 || params.album.length > 200) return { status: 400, body: { error: 'query_too_long' } }
   const durationSec = Math.round(params.durationMs / 1000)
   const key = `${artist}::${title}::${durationSec}`.toLowerCase()
   const cached = cache.get(key)

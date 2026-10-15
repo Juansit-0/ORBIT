@@ -34,7 +34,7 @@ test.describe('explain mode', () => {
     await orbit.openMenu('Settings')
     await page.locator('label[for="setting-explain"]').click()
     await page.keyboard.press('Escape')
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeAttached()
     await orbit.rowAction('Get Lucky', /Remove Get Lucky/)
     await expect(page.locator('.dock__explain')).toHaveText(/remove\(“Get Lucky”\) · O\(1\) at the head/)

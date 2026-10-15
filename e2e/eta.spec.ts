@@ -3,7 +3,7 @@ import { expect, test } from './fixtures.ts'
 test.describe('landing times', () => {
   test.beforeEach(async ({ page, orbit }) => {
     await page.clock.install({ time: new Date('2026-10-06T15:00:00') })
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeAttached()
   })
 

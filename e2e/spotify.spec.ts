@@ -39,7 +39,7 @@ test.describe('Spotify', () => {
     expect(calls.search[0]).toBe('track:Get Lucky artist:Daft Punk')
     await expect(page.locator('.badge')).toHaveText('On Spotify')
     await expect(page.locator('.monitor')).toBeHidden()
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('html')).toHaveAttribute('data-provider', 'spotify')
     await orbit.openMenu('Unlink Spotify')
     await expect(page.getByRole('heading', { name: 'How do you want to listen?' })).toBeVisible()

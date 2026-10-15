@@ -76,7 +76,7 @@ test.describe('playlists', () => {
     await create(orbit, 'Saved')
     await orbit.search('coldplay')
     await orbit.result('Clocks').getByRole('button', { name: /at the start/ }).click()
-    await orbit.page.reload()
+    await orbit.page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.page.locator('.library__button')).toHaveText('Saved')
     expect(await orbit.titles()).toEqual(['Clocks'])
     await openLibrary(orbit)

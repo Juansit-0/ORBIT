@@ -29,7 +29,7 @@ test.describe('auto DJ', () => {
     await expect(page.locator('.dj-chip')).toHaveAttribute('data-mixing', 'false')
     await expect.poll(() => page.evaluate(() => window.orbitFakePlayer?.volume ?? 0)).toBe(80)
     expect(await orbit.currentTitle()).toBe('Get Lucky')
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('.dj-chip')).toHaveAttribute('aria-pressed', 'true')
   })
 })

@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import { readFile, writeFile } from 'node:fs/promises'
 import { loadEnv, type Plugin } from 'vite'
 import { defineConfig } from 'vitest/config'
 
@@ -27,11 +28,27 @@ function localApi(): Plugin {
   }
 }
 
+function serviceWorkerVersion(): Plugin {
+  let outDir = 'dist'
+  return {
+    name: 'orbit-sw-version',
+    apply: 'build',
+    configResolved(config) {
+      outDir = config.build.outDir
+    },
+    async closeBundle() {
+      const path = `${outDir}/sw.js`
+      const source = await readFile(path, 'utf8').catch(() => null)
+      if (source) await writeFile(path, source.replace("'orbit-dev'", `'orbit-${Date.now().toString(36)}'`))
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   if (env.YOUTUBE_API_KEY) process.env.YOUTUBE_API_KEY = env.YOUTUBE_API_KEY
   return {
-    plugins: [localApi()],
+    plugins: [localApi(), serviceWorkerVersion()],
     server: { port: 5199 },
     build: {
       rollupOptions: {

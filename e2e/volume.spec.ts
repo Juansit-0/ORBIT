@@ -6,7 +6,7 @@ const playing = (page: import('@playwright/test').Page) => page.evaluate(() => w
 test.describe('smooth volume transitions', () => {
   test('fades out before pausing and back in when resuming', async ({ page, orbit }) => {
     await page.clock.install()
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeAttached()
     await orbit.play()
     await page.clock.runFor(1000)
@@ -33,7 +33,7 @@ test.describe('smooth volume transitions', () => {
     await page.locator('label[for="setting-smooth"]').click()
     await page.keyboard.press('Escape')
     await page.clock.install()
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeAttached()
     await orbit.play()
     await page.clock.runFor(500)
