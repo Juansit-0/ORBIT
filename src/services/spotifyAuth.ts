@@ -50,6 +50,7 @@ export async function challengeFor(verifier: string, digest: (data: Uint8Array) 
 
 export class SpotifyAuth {
   private readonly deps: Required<SpotifyAuthDeps>
+  private refreshing: Promise<SpotifyTokens> | null = null
 
   constructor(deps: SpotifyAuthDeps) {
     this.deps = {
@@ -111,8 +112,11 @@ export class SpotifyAuth {
     const tokens = this.tokens
     if (!tokens) throw new SpotifyAuthError('expired', 'Spotify is not linked.')
     if (tokens.expiresAt - this.deps.now() > 60000) return tokens.accessToken
-    const fresh = await this.requestTokens({ grant_type: 'refresh_token', refresh_token: tokens.refreshToken, client_id: this.deps.clientId }, tokens.refreshToken)
-    return fresh.accessToken
+    this.refreshing ??= this.requestTokens({ grant_type: 'refresh_token', refresh_token: tokens.refreshToken, client_id: this.deps.clientId }, tokens.refreshToken)
+      .finally(() => {
+        this.refreshing = null
+      })
+    return (await this.refreshing).accessToken
   }
 
   signOut(): void {
@@ -131,8 +135,9 @@ export class SpotifyAuth {
       throw new SpotifyAuthError('exchange', 'Spotify could not be reached.')
     }
     if (!response.ok) {
-      if (previousRefresh) this.signOut()
-      throw new SpotifyAuthError(previousRefresh ? 'expired' : 'exchange', 'Spotify did not accept the sign in.')
+      const refused = response.status === 400 || response.status === 401
+      if (previousRefresh && refused) this.signOut()
+      throw new SpotifyAuthError(previousRefresh && refused ? 'expired' : 'exchange', refused ? 'Spotify did not accept the sign in.' : 'Spotify could not be reached.')
     }
     const data = (await response.json()) as { access_token?: string; refresh_token?: string; expires_in?: number }
     if (!data.access_token) throw new SpotifyAuthError('exchange', 'Spotify did not return a token.')

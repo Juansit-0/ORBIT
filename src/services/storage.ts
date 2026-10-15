@@ -34,7 +34,7 @@ function isSnapshot(value: unknown): value is PlaylistSnapshot {
   const candidate = value as Partial<PlaylistSnapshot>
   return (
     Array.isArray(candidate.songs) &&
-    candidate.songs.every((song) => typeof song?.id === 'string' && typeof song?.title === 'string') &&
+    candidate.songs.every((song) => typeof song?.id === 'string' && typeof song?.title === 'string' && typeof song?.artist === 'string' && typeof song?.durationMs === 'number') &&
     typeof candidate.currentIndex === 'number'
   )
 }

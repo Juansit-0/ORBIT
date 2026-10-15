@@ -94,3 +94,28 @@ describe('SpotifyAuth', () => {
     await expect(auth.accessToken()).rejects.toMatchObject({ kind: 'expired' })
   })
 })
+
+describe('SpotifyAuth refresh', () => {
+  it('shares one refresh between callers that ask at the same time', async () => {
+    let calls = 0
+    const fetcher = vi.fn(async () => {
+      calls += 1
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      return json({ access_token: `fresh-${calls}`, refresh_token: `rotated-${calls}`, expires_in: 3600 })
+    })
+    const { auth, storage } = setup(fetcher, () => 10 ** 12)
+    storage.write('orbit:v1:spotify', { accessToken: 'old', refreshToken: 'r1', expiresAt: 0 })
+    const tokens = await Promise.all([auth.accessToken(), auth.accessToken(), auth.accessToken()])
+    expect(tokens).toEqual(['fresh-1', 'fresh-1', 'fresh-1'])
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(auth.tokens?.refreshToken).toBe('rotated-1')
+  })
+
+  it('stays linked when Spotify has a temporary problem', async () => {
+    const fetcher = vi.fn().mockResolvedValue(json({}, 503))
+    const { auth, storage } = setup(fetcher, () => 10 ** 12)
+    storage.write('orbit:v1:spotify', { accessToken: 'old', refreshToken: 'r1', expiresAt: 0 })
+    await expect(auth.accessToken()).rejects.toMatchObject({ kind: 'exchange' })
+    expect(auth.linked).toBe(true)
+  })
+})
