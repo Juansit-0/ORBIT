@@ -1,4 +1,7 @@
 import { pickClosest, rankByDuration } from '../../src/core/rankByDuration.js'
+import { BoundedCache } from './boundedCache.js'
+
+export const MAX_FIELD_LENGTH = 200
 
 export interface ApiSong {
   id: string
@@ -33,7 +36,7 @@ interface ItunesTrack {
 const ITUNES_URL = 'https://itunes.apple.com/search'
 const YOUTUBE_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search'
 const YOUTUBE_VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos'
-const resolveCache = new Map<string, string[]>()
+const resolveCache = new BoundedCache<string, string[]>(500)
 
 export function mapItunesTrack(track: ItunesTrack): ApiSong | null {
   if (!track.trackId || !track.trackName || !track.artistName) return null
@@ -164,6 +167,7 @@ export async function resolveVideo(
   const title = params.title.trim()
   const artist = params.artist.trim()
   if (!title || !artist) return { status: 400, body: { error: 'missing_fields' } }
+  if (title.length > MAX_FIELD_LENGTH || artist.length > MAX_FIELD_LENGTH) return { status: 400, body: { error: 'query_too_long' } }
   if (!apiKey) return { status: 503, body: { error: 'missing_key' } }
   const music = params.flavor === 'music'
   const cacheKey = `${music ? 'music' : 'video'}::${artist}::${title}`.toLowerCase()
