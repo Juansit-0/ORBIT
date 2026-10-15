@@ -188,6 +188,29 @@ describe('Playlist', () => {
     })
   })
 
+  describe('removing the current tail', () => {
+    it('wraps to the head with repeat all', () => {
+      playlist = playlistOf('a', 'b', 'c')
+      playlist.select(playlist.list.tail!.id)
+      playlist.setRepeat('all')
+      const result = playlist.remove(playlist.list.tail!.id)
+      expect(result?.current?.value.id).toBe('a')
+    })
+
+    it('falls back to the previous song without repeat', () => {
+      playlist = playlistOf('a', 'b', 'c')
+      playlist.select(playlist.list.tail!.id)
+      expect(playlist.remove(playlist.list.tail!.id)?.current?.value.id).toBe('b')
+    })
+
+    it('leaves nothing current when the only song is removed with repeat all', () => {
+      playlist = playlistOf('a')
+      playlist.next()
+      playlist.setRepeat('all')
+      expect(playlist.remove(playlist.list.head!.id)?.current).toBeNull()
+    })
+  })
+
   describe('shuffle', () => {
     beforeEach(() => {
       playlist = playlistOf('a', 'b', 'c', 'd', 'e')
@@ -216,6 +239,31 @@ describe('Playlist', () => {
         const after = mixed.playOrder().map((node) => node.value.artist.split(' feat.')[0])
         for (let i = 1; i < after.length; i++) expect(after[i]).not.toBe(after[i - 1])
       }
+    })
+
+    it('still plays every song after picking one by hand while shuffling', () => {
+      for (let seed = 0; seed < 25; seed++) {
+        const mixed = new Playlist(sequenceRandom([((seed * 37) % 100) / 100, 0.61, 0.07, 0.93, 0.35]))
+        for (const id of ['a', 'b', 'c', 'd', 'e']) mixed.addLast(song(id))
+        mixed.next()
+        mixed.setShuffle(true)
+        const last = mixed.playOrder().at(-1)!
+        mixed.select(last.id)
+        const heard = [mixed.current!.value.id]
+        while (mixed.next()) heard.push(mixed.current!.value.id)
+        expect(heard[0]).toBe(last.value.id)
+        expect(heard.length).toBe(4)
+        expect(heard).not.toContain('a')
+        expect(new Set(heard).size).toBe(4)
+      }
+    })
+
+    it('goes back to what was playing before a song picked by hand', () => {
+      playlist.setShuffle(true)
+      const before = playlist.current!
+      const picked = playlist.playOrder().at(-1)!
+      playlist.select(picked.id)
+      expect(playlist.previous()).toBe(before)
     })
 
     it('goes back through the shuffled order', () => {

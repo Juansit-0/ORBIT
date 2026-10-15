@@ -34,7 +34,7 @@ export class DoublyLinkedList<T> implements Iterable<T> {
 
   insertNodeAt(index: number, node: ListNode<T>): ListNode<T> {
     this.assertIndex(index, this.count)
-    if (node.prev || node.next || this.head === node) throw new Error('Node is already linked')
+    if (node.owner !== null || node.prev || node.next) throw new Error('Node is already linked')
     this.linkAt(index, node)
     return node
   }
@@ -81,7 +81,7 @@ export class DoublyLinkedList<T> implements Iterable<T> {
   }
 
   contains(node: ListNode<T>): boolean {
-    return this.indexOf(node) !== -1
+    return node.owner === this
   }
 
   removeAt(index: number): T {
@@ -133,6 +133,7 @@ export class DoublyLinkedList<T> implements Iterable<T> {
       const next = cursor.next
       cursor.prev = null
       cursor.next = null
+      cursor.owner = null
       cursor = next
     }
     this.head = null
@@ -161,6 +162,7 @@ export class DoublyLinkedList<T> implements Iterable<T> {
   }
 
   private linkFirst(node: ListNode<T>): void {
+    node.owner = this
     node.prev = null
     node.next = this.head
     if (this.head) this.head.prev = node
@@ -170,6 +172,7 @@ export class DoublyLinkedList<T> implements Iterable<T> {
   }
 
   private linkLast(node: ListNode<T>): void {
+    node.owner = this
     node.next = null
     node.prev = this.tail
     if (this.tail) this.tail.next = node
@@ -183,6 +186,7 @@ export class DoublyLinkedList<T> implements Iterable<T> {
     if (index === this.count) return this.linkLast(node)
     const successor = this.getNode(index) as ListNode<T>
     const predecessor = successor.prev as ListNode<T>
+    node.owner = this
     node.prev = predecessor
     node.next = successor
     predecessor.next = node
@@ -197,6 +201,7 @@ export class DoublyLinkedList<T> implements Iterable<T> {
     else this.tail = node.prev
     node.prev = null
     node.next = null
+    node.owner = null
     this.count -= 1
   }
 

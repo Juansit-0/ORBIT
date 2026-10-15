@@ -291,3 +291,22 @@ describe('insertNodeAt', () => {
     expectIntegrity(list)
   })
 })
+
+describe('node ownership', () => {
+  it('refuses a node that already belongs to another list, even as its only node', async () => {
+    const { DoublyLinkedList } = await import('../../src/core/DoublyLinkedList.ts')
+    const { ListNode } = await import('../../src/core/ListNode.ts')
+    const first = new DoublyLinkedList<string>()
+    const second = new DoublyLinkedList<string>()
+    const node = new ListNode('solo')
+    first.insertNodeAt(0, node)
+    expect(() => second.insertNodeAt(0, node)).toThrow('already linked')
+    expect(second.contains(node)).toBe(false)
+    first.removeNode(node)
+    second.insertNodeAt(0, node)
+    expect(second.contains(node)).toBe(true)
+    second.clear()
+    first.insertNodeAt(0, node)
+    expect(first.size).toBe(1)
+  })
+})
