@@ -69,6 +69,7 @@ export class PlaybackController {
   private readonly mixFader: VolumeFader
   private mixing = false
   private mixIn = false
+  private direction: 'forward' | 'backward' = 'forward'
 
   constructor(playlist: Playlist, deps: PlaybackDeps) {
     this.playlist = playlist
@@ -187,7 +188,7 @@ export class PlaybackController {
     if (this.transientNode) return this.resumePlan()
     const node = this.playlist.previous()
     if (!node) return false
-    await this.load(node, true)
+    await this.load(node, true, 'backward')
     return true
   }
 
@@ -335,7 +336,8 @@ export class PlaybackController {
     this.abort = null
   }
 
-  private async load(node: SongNode, autoplay: boolean): Promise<void> {
+  private async load(node: SongNode, autoplay: boolean, direction: 'forward' | 'backward' = 'forward'): Promise<void> {
+    this.direction = direction
     this.cancelMix()
     this.mixFader.cancel()
     if (this.fader && !this.mixIn && this.loadedNodeId !== node.id) await this.fadeOutCurrent(220)
@@ -441,8 +443,14 @@ export class PlaybackController {
       this.update({ status: 'idle', nodeId: node.id, currentMs: 0, source: null })
       return
     }
-    const next = this.playlist.next()
-    if (next && next !== node) await this.load(next, true)
+    let next: SongNode | null = null
+    let direction: 'forward' | 'backward' = 'forward'
+    if (this.direction === 'backward') {
+      next = this.playlist.previous()
+      if (next) direction = 'backward'
+    }
+    next ??= this.playlist.next()
+    if (next && next !== node) await this.load(next, true, direction)
     else {
       this.failures = 0
       this.loadedNodeId = null
@@ -460,7 +468,7 @@ export class PlaybackController {
     } else if (event.type === 'ended') {
       void this.handleEnded()
     } else if (event.type === 'error') {
-      const node = this.playlist.current
+      const node = this.transientNode ?? this.playlist.current
       if (node && node.id === this.loadedNodeId) void this.recover(node)
     }
   }
@@ -489,6 +497,7 @@ export class PlaybackController {
     this.stopAfter = false
     for (const listener of this.endListeners) listener()
     if (stop) {
+      this.active?.pause()
       this.active?.seek(0)
       this.update({ status: 'paused', currentMs: 0 })
       return
@@ -508,6 +517,7 @@ export class PlaybackController {
     const current = this.playlist.current
     const node = this.playlist.advanceAfterEnd()
     if (!node) {
+      this.active?.pause()
       this.loadedNodeId = null
       this.update({ status: 'idle', nodeId: current?.id ?? null, currentMs: 0 })
       for (const listener of this.planEndListeners) listener(current?.value ?? null)
