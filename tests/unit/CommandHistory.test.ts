@@ -103,3 +103,35 @@ describe('CommandHistory', () => {
     expect(history.undoLabel).toBe('ok')
   })
 })
+
+describe('CommandHistory failures', () => {
+  it('keeps a command that fails to undo or redo so it can be tried again', async () => {
+    const { CommandHistory } = await import('../../src/core/CommandHistory.ts')
+    const history = new CommandHistory()
+    const fail = { undo: false, redo: false }
+    let runs = 0
+    await history.run({
+      label: 'flaky',
+      execute: () => {
+        runs += 1
+        if (fail.redo) throw new Error('redo failed')
+      },
+      revert: () => {
+        if (fail.undo) throw new Error('undo failed')
+      },
+    })
+    fail.undo = true
+    await expect(history.undo()).rejects.toThrow('undo failed')
+    expect(history.canUndo).toBe(true)
+    fail.undo = false
+    await history.undo()
+    expect(history.canRedo).toBe(true)
+    fail.redo = true
+    await expect(history.redo()).rejects.toThrow('redo failed')
+    expect(history.canRedo).toBe(true)
+    fail.redo = false
+    await history.redo()
+    expect(history.canUndo).toBe(true)
+    expect(runs).toBe(3)
+  })
+})

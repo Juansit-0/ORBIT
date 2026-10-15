@@ -65,6 +65,9 @@ export class CommandHistory {
       try {
         await command.revert()
         this.undone.addLast(command)
+      } catch (error) {
+        this.done.addLast(command)
+        throw error
       } finally {
         this.emit()
       }
@@ -79,6 +82,9 @@ export class CommandHistory {
       try {
         await command.execute()
         this.done.addLast(command)
+      } catch (error) {
+        this.undone.addLast(command)
+        throw error
       } finally {
         this.emit()
       }
