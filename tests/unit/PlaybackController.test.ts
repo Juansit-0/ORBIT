@@ -202,6 +202,26 @@ describe('PlaybackController', () => {
     expect(full.loaded?.trackId).toBe('v-a-alt')
   })
 
+  it('goes back past an unavailable song instead of bouncing forward', async () => {
+    playlist.updateSong(playlist.list.nodes()[1]!.id, { unavailable: true })
+    await controller.togglePlay()
+    await controller.next()
+    await flush()
+    expect(full.loaded?.trackId).toBe('v-c')
+    await controller.previous()
+    await flush()
+    expect(full.loaded?.trackId).toBe('v-a')
+    expect(playlist.current?.value.id).toBe('a')
+  })
+
+  it('tries the next video when a song played outside the plan fails', async () => {
+    await controller.playSong({ ...song('x'), previewUrl: 'https://p/x' })
+    expect(full.loaded?.trackId).toBe('v-x')
+    full.emitter.emit({ type: 'error', reason: 'unplayable' })
+    await flush()
+    expect(full.loaded?.trackId).toBe('v-x-alt')
+  })
+
   it('stops when every song is unavailable', async () => {
     for (const node of playlist.list.nodes()) playlist.updateSong(node.id, { unavailable: true })
     await controller.togglePlay()
@@ -485,6 +505,29 @@ describe('DJ mix', () => {
     const mixed = controller.mixToNext(8000)
     manual.advance(8000)
     await mixed
+    expect(full.volume).toBe(80)
+  })
+
+  it('pauses for real when stop after this song is turned on during a mix', async () => {
+    const mixed = controller.mixToNext(8000)
+    manual.advance(4000)
+    controller.setStopAfterCurrent(true)
+    manual.advance(4000)
+    await mixed
+    expect(full.playing).toBe(false)
+    expect(controller.state.status).toBe('paused')
+    expect(playlist.current?.value.id).toBe('a')
+    expect(full.volume).toBe(80)
+  })
+
+  it('stops for real when the following songs are removed during a mix', async () => {
+    const mixed = controller.mixToNext(8000)
+    manual.advance(3000)
+    for (const node of playlist.list.nodes().slice(1)) await controller.remove(node.id)
+    manual.advance(5000)
+    await mixed
+    expect(full.playing).toBe(false)
+    expect(controller.state.status).toBe('idle')
     expect(full.volume).toBe(80)
   })
 
