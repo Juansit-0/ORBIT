@@ -76,7 +76,10 @@ export class Playlist {
     const node = this.list.findById(nodeId)
     if (!node) return null
     const wasCurrent = node === this.current
-    if (wasCurrent) this.current = this.successorOf(node) ?? this.predecessorOf(node)
+    if (wasCurrent) {
+      const wrap = this.repeat === 'all' && this.size > 1 ? this.firstNode() : null
+      this.current = this.successorOf(node) ?? (wrap !== node ? wrap : null) ?? this.predecessorOf(node)
+    }
     if (this.order) {
       const entry = this.orderEntryOf(node)
       if (entry) this.order.removeNode(entry)
@@ -94,6 +97,14 @@ export class Playlist {
   select(nodeId: string): SongNode | null {
     const node = this.list.findById(nodeId)
     if (!node) return null
+    if (this.order && node !== this.current) {
+      const entry = this.orderEntryOf(node)
+      const anchor = this.current ? this.orderEntryOf(this.current) : null
+      if (entry) {
+        this.order.removeNode(entry)
+        this.order.insertNodeAt(anchor ? this.order.indexOf(anchor) + 1 : 0, entry)
+      }
+    }
     this.current = node
     this.emit('select')
     return node

@@ -10,6 +10,7 @@ export class ListNode<T> {
   value: T
   prev: ListNode<T> | null = null
   next: ListNode<T> | null = null
+  owner: object | null = null
 
   constructor(value: T, id: string = createNodeId()) {
     this.value = value
