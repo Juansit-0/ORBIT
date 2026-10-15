@@ -81,7 +81,7 @@ export class MixDialog {
     this.seed = seed
     this.renderLoading()
     try {
-      const songs = await buildMix(seed, (term) => searchSongs(term))
+      const songs = await buildMix(seed, (term, by) => searchSongs(term, undefined, by))
       if (request !== this.request) return
       this.songs = songs
       if (songs.length === 0) this.renderMessage(`No songs found for “${seed}”. Try an artist name or a genre.`, null)

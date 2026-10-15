@@ -34,6 +34,21 @@ describe('buildMix', () => {
     expect(mix.map((s) => s.id)).not.toContain('g')
   })
 
+  it('uses the band when the seed is an artist name, not songs titled like it', async () => {
+    const results = [
+      track('1', 'Airbag', 'Rock'),
+      track('2', 'Radiohead', 'Alternative'),
+      track('3', 'Airbag', 'Rock'),
+      track('4', 'TABLO feat. Naul'),
+      track('5', 'Airbag & Guest', 'Rock'),
+      track('6', 'Easy Star All-Stars'),
+    ]
+    const search = vi.fn(async (term: string, by?: 'artist') => (by === 'artist' ? results : term === 'Rock hits' ? [track('7', 'Soda Stereo', 'Rock')] : results))
+    const mix = await buildMix('airbag', search)
+    expect(search).toHaveBeenCalledWith('airbag', 'artist')
+    expect(mix.map((s) => s.id).sort()).toEqual(['1', '3', '5', '7'])
+  })
+
   it('keeps at most the mix size', async () => {
     const many = Array.from({ length: 40 }, (_, i) => track(String(i), `Artist ${i}`))
     const mix = await buildMix('anything', async () => many, Math.random, 20)

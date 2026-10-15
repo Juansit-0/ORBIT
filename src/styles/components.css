@@ -3022,7 +3022,7 @@ html:not(.has-scene) .lens[data-cover='shown'] {
   background: var(--paper);
   color: var(--ink);
   box-shadow: 0 0 0 1px var(--rule), var(--shadow-3);
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .mix[open] {
@@ -3093,7 +3093,7 @@ html:not(.has-scene) .lens[data-cover='shown'] {
 
 .mix__body {
   flex: 1;
-  min-height: 0;
+  min-height: min(280px, 40svh);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 var(--space-4) var(--space-3);

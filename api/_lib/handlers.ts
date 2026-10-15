@@ -53,12 +53,12 @@ export function mapItunesTrack(track: ItunesTrack): ApiSong | null {
   return song
 }
 
-export async function searchSongs(term: string, fetcher: Fetcher = fetch): Promise<ApiResult> {
+export async function searchSongs(term: string, fetcher: Fetcher = fetch, byArtist = false): Promise<ApiResult> {
   const query = term.trim()
   if (query.length < 2) return { status: 400, body: { error: 'query_too_short' } }
   if (query.length > 120) return { status: 400, body: { error: 'query_too_long' } }
   const url = new URL(ITUNES_URL)
-  url.search = new URLSearchParams({ term: query, media: 'music', entity: 'song', limit: '25' }).toString()
+  url.search = new URLSearchParams({ term: query, media: 'music', entity: 'song', limit: '25', ...(byArtist ? { attribute: 'artistTerm' } : {}) }).toString()
   try {
     const response = await fetcher(url)
     if (!response.ok) return { status: 502, body: { error: 'upstream_error' } }

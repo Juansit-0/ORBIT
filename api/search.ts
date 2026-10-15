@@ -1,6 +1,6 @@
 import { searchSongs, toResponse } from './_lib/handlers.js'
 
 export async function GET(request: Request): Promise<Response> {
-  const term = new URL(request.url).searchParams.get('term') ?? ''
-  return toResponse(await searchSongs(term), 3600)
+  const params = new URL(request.url).searchParams
+  return toResponse(await searchSongs(params.get('term') ?? '', fetch, params.get('by') === 'artist'), 3600)
 }
