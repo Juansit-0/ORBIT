@@ -13,7 +13,7 @@ test.describe('interface details', () => {
     await page.keyboard.press('Escape')
     await orbit.search('radiohead')
     await orbit.result('Karma Police').getByRole('button', { name: /at the start/ }).click()
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('html')).toHaveAttribute('data-vinyl', 'true')
   })
 

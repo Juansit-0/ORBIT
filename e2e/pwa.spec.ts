@@ -19,10 +19,10 @@ test.describe('installable app', () => {
     await page.evaluate(async () => {
       await navigator.serviceWorker.ready
     })
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true)
     await context.setOffline(true)
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeVisible()
     await expect(page.locator('.deck__title')).toBeVisible()
     await context.setOffline(false)

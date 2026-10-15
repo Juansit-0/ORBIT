@@ -12,7 +12,7 @@ test.describe('recently played', () => {
     await page.locator('#search-input').focus()
     const recent = page.locator('.results--recent .result__title')
     await expect(recent).toHaveText(['Get Lucky'])
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await page.locator('#search-input').focus()
     await expect(recent).toHaveText(['Get Lucky'])
     await page.getByRole('button', { name: 'Clear recently played' }).click()

@@ -117,7 +117,7 @@ export const test = base.extend<{ mocks: ApiMocks; listShown: boolean; provider:
         },
       })
     })
-    await page.goto('/app/')
+    await page.goto('/app/', { waitUntil: 'domcontentloaded' })
     if (provider) await expect(page.locator('.waypoint').first()).toBeAttached()
     await use(new OrbitPage(page))
   },

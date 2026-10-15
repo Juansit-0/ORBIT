@@ -18,7 +18,7 @@ test.describe('linked list panel', () => {
     await expect(page.locator('.dock')).toBeVisible()
     await expect(page.getByRole('switch', { name: /Explain list operations/ })).toBeVisible()
     await page.keyboard.press('Escape')
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('.dock')).toBeVisible()
     await expect(page.locator('.dock__size')).toHaveText('size 8')
   })
@@ -39,7 +39,7 @@ test.describe('linked list panel', () => {
   test('explains nothing while the panel is hidden', async ({ orbit }) => {
     const { page } = orbit
     await page.evaluate(() => localStorage.setItem('orbit:v1:prefs', JSON.stringify({ volume: 80, explain: true, showList: false })))
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await orbit.rowAction('Dreams', /Remove Dreams/)
     await expect(page.locator('.dock[data-explaining]')).toHaveCount(0)
   })

@@ -3,7 +3,7 @@ import { expect, test } from './fixtures.ts'
 test.describe('player mode', () => {
   test('fades everything but the player after 20 s without interaction', async ({ page, orbit }) => {
     await page.clock.install()
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeAttached()
     await orbit.play()
     await page.mouse.move(5, 5)
@@ -21,7 +21,7 @@ test.describe('player mode', () => {
 
   test('does not start while paused', async ({ page, orbit }) => {
     await page.clock.install()
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeAttached()
     await page.clock.runFor(30000)
     await expect(page.locator('html')).not.toHaveAttribute('data-cinema', 'true')
@@ -49,7 +49,7 @@ test.describe('player mode', () => {
     await expect(page.getByRole('radio', { name: 'Never' })).toBeChecked()
     await page.keyboard.press('Escape')
     await page.clock.install()
-    await page.reload()
+    await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(orbit.rows().first()).toBeAttached()
     await orbit.play()
     await page.mouse.move(5, 5)
